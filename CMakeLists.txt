@@ -75,9 +75,9 @@ set(GAME_SOURCES
     components/Game/sounds.c
 )
 
-# Audiolib - use stub implementation for initial port (no sound)
-# The full audiolib will be integrated later
-set(AUDIOLIB_SOURCES
+# Sound system - I2S audio driver
+set(SOUND_SOURCES
+    src/i_picosound.c
     src/audio_stub.c
 )
 
@@ -93,7 +93,7 @@ add_executable(murmduke3d
     src/fatfs_stdio.c
     ${ENGINE_SOURCES}
     ${GAME_SOURCES}
-    ${AUDIOLIB_SOURCES}
+    ${SOUND_SOURCES}
 )
 
 target_include_directories(murmduke3d PRIVATE
@@ -113,8 +113,6 @@ target_compile_definitions(murmduke3d PRIVATE
     PLATFORM_SUPPORTS_SDL
     DUKE3D_RP2350
     PLATFORM_ESP32  # Use ESP32 platform code paths
-    # Disable sound for initial port
-    NOSOUND
     # Screen resolution
     DUKE3D_RESX=320
     DUKE3D_RESY=200
@@ -124,7 +122,25 @@ target_compile_definitions(murmduke3d PRIVATE
     # Memory management - large arrays in PSRAM
     RP2350_PSRAM
     EXT_RAM_ATTR=
+    # I2S Audio Configuration
+    PICO_AUDIO_I2S_PIO=1
+    PICO_AUDIO_I2S_STATE_MACHINE=2
+    PICO_AUDIO_I2S_DMA_IRQ=1
+    NUM_SOUND_CHANNELS=8
 )
+
+# Add I2S pin definitions based on board variant
+if(BOARD_VARIANT STREQUAL "M1")
+    target_compile_definitions(murmduke3d PRIVATE
+        PICO_AUDIO_I2S_DATA_PIN=26
+        PICO_AUDIO_I2S_CLOCK_PIN_BASE=27
+    )
+else()
+    target_compile_definitions(murmduke3d PRIVATE
+        PICO_AUDIO_I2S_DATA_PIN=9
+        PICO_AUDIO_I2S_CLOCK_PIN_BASE=10
+    )
+endif()
 
 # Relax some warnings for the Duke3D engine code (32-bit pointer issues)
 target_compile_options(murmduke3d PRIVATE
@@ -147,6 +163,7 @@ pico_set_linker_script(murmduke3d ${CMAKE_CURRENT_SOURCE_DIR}/memmap_psram.ld)
 target_link_libraries(murmduke3d
     pico_stdlib
     pico_multicore
+    pico_audio_i2s
     hardware_spi
     hardware_dma
     hardware_pio

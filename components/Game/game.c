@@ -48,6 +48,10 @@ Prepared for public release: 03/21/2003 - Charlie Wiederhold, 3D Realms
 
 #include "console.h"
 #include "cvars.h"
+
+#ifdef DUKE3D_RP2350
+#include "i_picosound.h"
+#endif
 #include "cvar_defs.h"
 
 #include <sys/types.h>
@@ -789,6 +793,11 @@ IRAM_ATTR void faketimerhandler()
 {
     int32_t i, j, k;
     input *osyn, *nsyn;
+
+#ifdef DUKE3D_RP2350
+    // Update I2S audio - mix and send audio buffers
+    I_PicoSound_Update();
+#endif
 
     //Check if we should quit the game.
     if ((qe == 0 && KB_KeyPressed(sc_LeftControl) && KB_KeyPressed(sc_LeftAlt) && KB_KeyPressed(sc_Delete)) ||
