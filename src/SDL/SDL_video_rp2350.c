@@ -216,16 +216,27 @@ int SDL_SetColors(SDL_Surface *surface, SDL_Color *colors, int firstcolor, int n
 int SDL_Flip(SDL_Surface *screen) {
     if (!screen || !back_buffer || !front_buffer) return -1;
     
-    /* Copy back buffer to front buffer using DMA for speed */
-    if (dma_chan >= 0) {
-        /* Use DMA for fast copy - 32-bit transfers, so divide byte count by 4 */
-        dma_channel_set_read_addr(dma_chan, back_buffer, false);
-        dma_channel_set_write_addr(dma_chan, front_buffer, false);
-        dma_channel_set_trans_count(dma_chan, FRAME_SIZE / 4, true);  /* Start transfer */
-        dma_channel_wait_for_finish_blocking(dma_chan);
-    } else {
-        /* Fallback to memcpy if DMA not available */
-        memcpy(front_buffer, back_buffer, FRAME_SIZE);
+    /* Fast 32-bit word copy - much faster than memcpy for PSRAM */
+    uint32_t *src = (uint32_t *)back_buffer;
+    uint32_t *dst = (uint32_t *)front_buffer;
+    uint32_t count = FRAME_SIZE / 4;  /* 76800 / 4 = 19200 words */
+    
+    /* Unrolled loop for speed */
+    while (count >= 8) {
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+        dst[3] = src[3];
+        dst[4] = src[4];
+        dst[5] = src[5];
+        dst[6] = src[6];
+        dst[7] = src[7];
+        src += 8;
+        dst += 8;
+        count -= 8;
+    }
+    while (count--) {
+        *dst++ = *src++;
     }
     
     return 0;
