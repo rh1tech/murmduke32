@@ -20,6 +20,7 @@ void __no_inline_not_in_flash_func(psram_init)(uint cs_pin) {
     while (qmi_hw->direct_csr & QMI_DIRECT_CSR_BUSY_BITS);
 
 
+    // PSRAM max frequency - 133MHz allows 126MHz at 378MHz sys clock
     const int max_psram_freq = 133000000; 
     
     int divisor = (clock_hz + max_psram_freq - 1) / max_psram_freq;
