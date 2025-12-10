@@ -133,8 +133,14 @@ target_compile_definitions(murmduke3d PRIVATE
     RP2350_PSRAM
     EXT_RAM_ATTR=
     # I2S Audio Configuration
-    PICO_AUDIO_I2S_PIO=1
-    PICO_AUDIO_I2S_STATE_MACHINE=2
+    # NOTE: Resource allocation:
+    # - PIO0 SM0: PS/2 keyboard (claims first unused)
+    # - PIO0 SM1: I2S audio (we claim this specific SM)
+    # - PIO1 SM0-1: HDMI video (claims unused)
+    # - DMA IRQ0: HDMI (exclusive handler)
+    # - DMA IRQ1: I2S audio (shared handler)
+    PICO_AUDIO_I2S_PIO=0
+    PICO_AUDIO_I2S_STATE_MACHINE=1
     PICO_AUDIO_I2S_DMA_IRQ=1
     NUM_SOUND_CHANNELS=8
     # OPL emulator configuration

@@ -465,7 +465,9 @@ static void scansector (short sectnum)
                         //(x2-x1)*(x2-x1)+(y2-y1)*(y2-y1) is the squared length of the wall
                         // ??? What is this test ?? How acute the angle is ?
                         if (mulscale5(tempint,tempint) <= (x2-x1)*(x2-x1)+(y2-y1)*(y2-y1))
-                            sectorsToVisit[numSectorsToVisit++] = nextsectnum;
+                            // Bounds check to prevent stack overflow
+                            if (numSectorsToVisit < 255)
+                                sectorsToVisit[numSectorsToVisit++] = nextsectnum;
                     }
                 }
 
@@ -562,6 +564,9 @@ static void scansector (short sectnum)
             bunchWallsList[numscans] = numscans+1;
             numscans++;
             
+            // Bounds check to prevent overflow
+            if (numscans >= MAXWALLSB - 1) goto done_scanning;
+            
 skipitaddwall:
 
             if ((wall[z].point2 < z) && (scanfirst < numscans))
@@ -586,6 +591,9 @@ skipitaddwall:
                 
                 //Mark the end of the bunch wall list.
                 bunchWallsList[z] = -1;
+                
+                // Bounds check for numbunches
+                if (numbunches >= MAXWALLSB - 1) goto done_scanning;
             }
         }
 
@@ -598,6 +606,9 @@ skipitaddwall:
 
     } while (numSectorsToVisit > 0);
     // do this until the stack of sectors to visit if empty.
+    
+done_scanning:
+    ; // Exit point for overflow protection
 }
 
 /*

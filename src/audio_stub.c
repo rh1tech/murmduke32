@@ -9,6 +9,12 @@
 #include "music.h"
 #include "i_picosound.h"
 
+// Debug: Set to 1 to disable sound effects (but keep music)
+#define DISABLE_SOUND_EFFECTS 0
+
+// Debug: Set to 1 to disable sound callbacks (sounds play but don't notify game)
+#define DISABLE_SOUND_CALLBACKS 0
+
 // ============= FX_MAN Implementation =============
 
 int FX_SoundDevice = -1;
@@ -69,8 +75,15 @@ int FX_Shutdown(void) {
 }
 
 int FX_SetCallBack(void (*function)(int32_t)) {
+#if DISABLE_SOUND_CALLBACKS
+    // Don't register callback - sounds will play but game won't be notified
+    (void)function;
+    printf("[AUDIO] Callbacks DISABLED for testing\n");
+    return FX_Ok;
+#else
     I_PicoSound_SetCallback(function);
     return FX_Ok;
+#endif
 }
 
 void FX_SetVolume(int volume) {
@@ -151,7 +164,14 @@ static uint32_t get_voc_data_length(uint8_t *ptr) {
         uint8_t block_type = block[0];
         if (block_type == 0) break;  // Terminator
         
+        // Invalid block type - stop parsing
+        if (block_type > 9) break;
+        
         uint32_t block_size = block[1] | (block[2] << 8) | (block[3] << 16);
+        
+        // Sanity check - block size shouldn't be huge
+        if (block_size > 1000000) break;  // 1MB max per block
+        
         total_length = (block - ptr) + 4 + block_size;
         block += 4 + block_size;
     }
@@ -169,28 +189,45 @@ int FX_PlayVOC(uint8_t *ptr, int pitchoffset, int vol, int left, int right,
                int priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     uint32_t length = get_voc_data_length(ptr);
     return I_PicoSound_PlayVOC(ptr, length, 0, pitchoffset, vol, left, right,
                                priority, callbackval, false, 0, 0);
+#endif
 }
 
 int FX_PlayLoopedVOC(uint8_t *ptr, int32_t loopstart, int32_t loopend,
                      int32_t pitchoffset, int32_t vol, int32_t left, int32_t right, 
                      int32_t priority, uint32_t callbackval) {
+    printf("FX_PlayLoopedVOC: ptr=%p cbval=%u\n", ptr, (unsigned)callbackval);
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
+    printf("FX_PlayLoopedVOC: getting length...\n");
     uint32_t length = get_voc_data_length(ptr);
-    return I_PicoSound_PlayVOC(ptr, length, 0, pitchoffset, vol, left, right,
+    printf("FX_PlayLoopedVOC: length=%u, calling I_PicoSound...\n", (unsigned)length);
+    int result = I_PicoSound_PlayVOC(ptr, length, 0, pitchoffset, vol, left, right,
                                priority, callbackval, true, loopstart, loopend);
+    printf("FX_PlayLoopedVOC: result=%d\n", result);
+    return result;
+#endif
 }
 
 int FX_PlayWAV(uint8_t *ptr, int pitchoffset, int vol, int left, int right,
                int priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     uint32_t length = get_wav_data_length(ptr);
     return I_PicoSound_PlayWAV(ptr, length, pitchoffset, vol, left, right,
                                priority, callbackval, false, 0, 0);
+#endif
 }
 
 int FX_PlayLoopedWAV(uint8_t *ptr, int32_t loopstart, int32_t loopend,
@@ -198,15 +235,22 @@ int FX_PlayLoopedWAV(uint8_t *ptr, int32_t loopstart, int32_t loopend,
                      int32_t priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     uint32_t length = get_wav_data_length(ptr);
     return I_PicoSound_PlayWAV(ptr, length, pitchoffset, vol, left, right,
                                priority, callbackval, true, loopstart, loopend);
+#endif
 }
 
 int FX_PlayVOC3D(uint8_t *ptr, int32_t pitchoffset, int32_t angle, int32_t distance,
                  int32_t priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     // Duke3D angle is 0-31 (after >>6 from 0-2047)
     // Duke3D distance is 0-255 (after >>6 from 0-16383)
     // angle 0 = front, 8 = right, 16 = back, 24 = left
@@ -255,12 +299,16 @@ int FX_PlayVOC3D(uint8_t *ptr, int32_t pitchoffset, int32_t angle, int32_t dista
     uint32_t length = get_voc_data_length(ptr);
     return I_PicoSound_PlayVOC(ptr, length, 0, pitchoffset, vol, left, right,
                                priority, callbackval, false, 0, 0);
+#endif
 }
 
 int FX_PlayWAV3D(uint8_t *ptr, int pitchoffset, int angle, int distance,
                  int priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     // Same calculation as VOC3D - Duke3D angle is 0-31
     int vol = 255 - (distance * 2);
     if (vol < 32) vol = 32;
@@ -295,6 +343,7 @@ int FX_PlayWAV3D(uint8_t *ptr, int pitchoffset, int angle, int distance,
     uint32_t length = get_wav_data_length(ptr);
     return I_PicoSound_PlayWAV(ptr, length, pitchoffset, vol, left, right,
                                priority, callbackval, false, 0, 0);
+#endif
 }
 
 int FX_PlayRaw(uint8_t *ptr, uint32_t length, uint32_t rate,
@@ -302,8 +351,12 @@ int FX_PlayRaw(uint8_t *ptr, uint32_t length, uint32_t rate,
                int32_t priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     return I_PicoSound_PlayRaw(ptr, length, rate, pitchoffset, vol, left, right,
                                priority, callbackval, false, NULL, NULL);
+#endif
 }
 
 int FX_PlayLoopedRaw(uint8_t *ptr, uint32_t length, char *loopstart,
@@ -311,9 +364,13 @@ int FX_PlayLoopedRaw(uint8_t *ptr, uint32_t length, char *loopstart,
                      int32_t left, int32_t right, int32_t priority, uint32_t callbackval) {
     if (!FX_Installed || !ptr) return 0;
     
+#if DISABLE_SOUND_EFFECTS
+    return 0;  // Disabled for debugging
+#else
     return I_PicoSound_PlayRaw(ptr, length, rate, pitchoffset, vol, left, right,
                                priority, callbackval, true,
                                (const uint8_t *)loopstart, (const uint8_t *)loopend);
+#endif
 }
 
 int32_t FX_Pan3D(int handle, int angle, int distance) {

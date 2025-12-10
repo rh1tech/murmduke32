@@ -549,8 +549,16 @@ static void MusicGenerator(audio_buffer_t *buffer) {
     unsigned int filled = 0;
     int total_events_processed = 0;
     const int MAX_EVENTS_PER_BUFFER = 200;
+    int loop_iterations = 0;
+    const int MAX_LOOP_ITERATIONS = 2000;  // Safety limit
 
     while (filled < samples_to_fill) {
+        // Safety check to prevent infinite loops
+        if (++loop_iterations > MAX_LOOP_ITERATIONS) {
+            printf("MusicGen: loop limit hit, filled=%u/%u\n", filled, samples_to_fill);
+            break;
+        }
+        
         // Find earliest next event
         uint64_t next_event_time = UINT64_MAX;
         for (unsigned int t = 0; t < num_tracks; t++) {

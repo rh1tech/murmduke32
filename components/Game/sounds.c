@@ -417,9 +417,15 @@ int xyzsound(short num,short i,int32_t x,int32_t y,int32_t z)
     }
     else
     {
-        if( *Sound[num].ptr == 'C')
+        uint8_t firstbyte = *Sound[num].ptr;
+        if( firstbyte == 'C')
+        {
             voice = FX_PlayVOC3D( Sound[ num ].ptr,pitch,sndang>>6,sndist>>6, soundpr[num], num );
-        else voice = FX_PlayWAV3D( Sound[ num ].ptr,pitch,sndang>>6,sndist>>6, soundpr[num], num );
+        }
+        else 
+        {
+            voice = FX_PlayWAV3D( Sound[ num ].ptr,pitch,sndang>>6,sndist>>6, soundpr[num], num );
+        }
     }
 
     if ( voice > FX_Ok )
@@ -608,12 +614,27 @@ void TestCallBack(int32_t num)
 
         if(num < 0)
         {
+            // Bounds check for negative values
+            if(-num >= 11) return;  // lumplockbyte has 11 entries
             if(lumplockbyte[-num] >= 200)
                 lumplockbyte[-num]--;
             return;
         }
 
+        // Bounds check for positive values
+        if(num >= NUM_SOUNDS) {
+            printf("TestCallBack: num %d >= NUM_SOUNDS\n", num);
+            return;
+        }
+
         tempk = Sound[num].num;
+
+        // Bounds check for SoundOwner second index (max 4)
+        if(tempk < 0 || tempk > 4) {
+            printf("TestCallBack: Sound[%d].num=%d out of range\n", num, tempk);
+            tempk = 0;
+            Sound[num].num = 0;
+        }
 
         if(tempk > 0)
         {
@@ -621,9 +642,14 @@ void TestCallBack(int32_t num)
                 for(tempj=0;tempj<tempk;tempj++)
             {
                 tempi = SoundOwner[num][tempj].i;
+                // Bounds check sprite index and sector
+                if(tempi < 0 || tempi >= MAXSPRITES) continue;
+                if(sprite[tempi].sectnum < 0 || sprite[tempi].sectnum >= MAXSECTORS) continue;
                 if(sprite[tempi].picnum == MUSICANDSFX && sector[sprite[tempi].sectnum].lotag < 3 && sprite[tempi].lotag < 999)
                 {
-                    hittype[tempi].temp_data[0] = 0;
+                    // Bounds check hittype index
+                    if(tempi >= 0 && tempi < MAXSPRITES)
+                        hittype[tempi].temp_data[0] = 0;
                     if( (tempj + 1) < tempk )
                     {
                         SoundOwner[num][tempj].voice = SoundOwner[num][tempk-1].voice;
@@ -634,7 +660,8 @@ void TestCallBack(int32_t num)
             }
 
             Sound[num].num--;
-            SoundOwner[num][tempk-1].i = -1;
+            if(tempk-1 >= 0 && tempk-1 < 4)
+                SoundOwner[num][tempk-1].i = -1;
         }
 
         Sound[num].lock--;

@@ -3,10 +3,14 @@
  * This extends the default pico-sdk linker script
  */
 
+/* Reserve 16KB at end of RAM for stack - Duke3D needs more than 4KB */
+__main_stack_size__ = 16K;
+
 MEMORY
 {
     FLASH(rx) : ORIGIN = 0x10000000, LENGTH = 4096k
-    RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 512k
+    RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 512k - 16k
+    STACK_RAM(rwx) : ORIGIN = 0x2007c000, LENGTH = 16k
     SCRATCH_X(rwx) : ORIGIN = 0x20080000, LENGTH = 4k
     SCRATCH_Y(rwx) : ORIGIN = 0x20081000, LENGTH = 4k
     PSRAM(rwx) : ORIGIN = 0x11000000, LENGTH = 8192k
@@ -223,21 +227,23 @@ SECTIONS
     {
         *(.stack1*)
     } > SCRATCH_X
+    
+    /* Main stack - use larger STACK_RAM region instead of tiny SCRATCH_Y */
     .stack_dummy (NOLOAD):
     {
-        KEEP(*(.stack*))
-    } > SCRATCH_Y
+        . = . + __main_stack_size__;
+    } > STACK_RAM
 
     .flash_end : {
         KEEP(*(.embedded_end_block*))
         PROVIDE(__flash_binary_end = .);
     } > FLASH =0xaa
 
-    __StackLimit = ORIGIN(RAM) + LENGTH(RAM);
+    __StackLimit = ORIGIN(STACK_RAM);
     __StackOneTop = ORIGIN(SCRATCH_X) + LENGTH(SCRATCH_X);
-    __StackTop = ORIGIN(SCRATCH_Y) + LENGTH(SCRATCH_Y);
+    __StackTop = ORIGIN(STACK_RAM) + LENGTH(STACK_RAM);
     __StackOneBottom = __StackOneTop - SIZEOF(.stack1_dummy);
-    __StackBottom = __StackTop - SIZEOF(.stack_dummy);
+    __StackBottom = __StackLimit;
     PROVIDE(__stack = __StackTop);
 
     PROVIDE (__heap_start = __end__);

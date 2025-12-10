@@ -28,11 +28,12 @@
 #endif
 
 #ifndef PICO_AUDIO_I2S_DMA_CHANNEL
-#define PICO_AUDIO_I2S_DMA_CHANNEL 6
+#define PICO_AUDIO_I2S_DMA_CHANNEL 10
 #endif
 
 #ifndef PICO_AUDIO_I2S_STATE_MACHINE
-#define PICO_AUDIO_I2S_STATE_MACHINE 2
+// NOTE: Use SM1 on PIO0 - PS/2 keyboard uses SM0
+#define PICO_AUDIO_I2S_STATE_MACHINE 1
 #endif
 
 //=============================================================================
@@ -221,7 +222,13 @@ static void queue_callback(uint32_t callback_val) {
 // Process any pending callbacks (called from I_PicoSound_Update)
 static void process_pending_callbacks(void) {
     // Prevent re-entrancy - callback might trigger another sound that finishes
-    if (processing_callbacks) return;
+    if (processing_callbacks) {
+        static int reentrant_warns = 0;
+        if (reentrant_warns++ < 3) {
+            printf("CALLBACK: Re-entrancy blocked!\n");
+        }
+        return;
+    }
     processing_callbacks = true;
     
     // Process up to a limited number to prevent infinite loops
@@ -232,7 +239,10 @@ static void process_pending_callbacks(void) {
         processed++;
         
         if (sound_callback) {
+            // Debug: log ALL callbacks to find crash point
+            printf("CB: val=%u q=%d/%d\n", cb_val, pending_callback_head, pending_callback_tail);
             sound_callback(cb_val);
+            printf("CB: done\n");
         }
     }
     
@@ -540,17 +550,33 @@ static void mix_audio_buffer(audio_buffer_t *buffer) {
         uint32_t offset_end = v->buffer_size * 65536;
         int16_t *out = samples;
         
+        // Safety check - offset should never exceed buffer
+        if ((v->offset >> 16) >= VOICE_BUFFER_SAMPLES) {
+            printf("MIX OVERFLOW: ch=%d offset=%u buf_size=%u\n", ch, v->offset >> 16, v->buffer_size);
+            v->offset = 0;
+        }
+        
 #if SOUND_LOW_PASS
         int alpha256 = v->alpha256;
         int beta256 = 256 - alpha256;
         int sample = v->buffer[v->offset >> 16];
 #endif
         
+        int decompress_calls = 0;  // Track decompress calls per voice per buffer
+        
         for (int s = 0; s < sample_count; s++) {
+            // Bounds check buffer access
+            uint32_t buf_idx = v->offset >> 16;
+            if (buf_idx >= VOICE_BUFFER_SAMPLES) {
+                printf("MIX IDX OVERFLOW: ch=%d idx=%u\n", ch, buf_idx);
+                v->active = false;
+                break;
+            }
+            
 #if !SOUND_LOW_PASS
-            int sample = v->buffer[v->offset >> 16];
+            int sample = v->buffer[buf_idx];
 #else
-            sample = (beta256 * sample + alpha256 * v->buffer[v->offset >> 16]) / 256;
+            sample = (beta256 * sample + alpha256 * v->buffer[buf_idx]) / 256;
 #endif
             
             // Mix into output - both channels should get audio
@@ -571,15 +597,29 @@ static void mix_audio_buffer(audio_buffer_t *buffer) {
             // Buffer exhausted - decompress next block
             if (v->offset >= offset_end) {
                 v->offset -= offset_end;
+                
+                // Safety: limit decompress calls per voice to prevent infinite loop
+                decompress_calls++;
+                if (decompress_calls > 20) {
+                    printf("MIX: too many decompress ch=%d, stopping\n", ch);
+                    v->active = false;
+                    break;
+                }
+                
                 decompress_buffer(v);  // Read from PSRAM here
+                
                 offset_end = v->buffer_size * 65536;
-                if (offset_end == 0 || v->offset >= offset_end) {
+                if (offset_end == 0) {
                     // Sound finished or buffer empty - queue callback
                     if (v->callback_val != 0) {
                         queue_callback(v->callback_val);
                     }
                     v->active = false;
                     break;
+                }
+                // Clamp offset to new buffer size
+                if (v->offset >= offset_end) {
+                    v->offset = 0;
                 }
             }
         }
@@ -665,21 +705,31 @@ void I_PicoSound_Shutdown(void) {
     printf("I_PicoSound_Shutdown: Sound system shut down\n");
 }
 
+// Forward declaration
+extern void psram_print_stats(void);
+
 void I_PicoSound_Update(void) {
     if (!sound_initialized) return;
     
-    // Periodic status report to detect hangs
+    // Periodic status report to detect hangs and memory issues
     static uint32_t update_count = 0;
     update_count++;
-    if ((update_count % 1000) == 0) {
+    if ((update_count % 500) == 0) {
         printf("SND: update=%lu mix=%lu\n", (unsigned long)update_count, (unsigned long)mix_iteration_count);
+        psram_print_stats();
     }
     
     // Process audio buffers - decompress_buffer is called inline during mixing
     // This is the murmdoom pattern: PSRAM access happens inside the mix loop
     audio_buffer_t *buffer;
+    int buffers_processed = 0;
     while ((buffer = take_audio_buffer(producer_pool, false)) != NULL) {
         mix_audio_buffer(buffer);
+        buffers_processed++;
+        if (buffers_processed > 10) {
+            printf("SND: Too many buffers in one update!\n");
+            break;
+        }
     }
     
     // Process any pending callbacks from finished sounds
@@ -712,6 +762,12 @@ int I_PicoSound_PlayVOC(const uint8_t *data, uint32_t length,
         codec = 0;
     }
     
+    // Log looping sounds for debugging
+    if (looping) {
+        printf("LOOP VOC: cb=%u len=%u samp_len=%u rate=%u codec=%d\n",
+               callbackval, length, sample_length, sample_rate, codec);
+    }
+    
     // For ADPCM, we need to handle it specially
     bool is_adpcm = (codec == 4);
     
@@ -724,8 +780,11 @@ int I_PicoSound_PlayVOC(const uint8_t *data, uint32_t length,
     
     v->data = sample_data;
     v->data_end = sample_data + sample_length;
-    v->loop_start = looping ? sample_data + loopstart : NULL;
-    v->loop_end = looping ? sample_data + loopend : NULL;
+    
+    // NOTE: Duke3D's loopstart/loopend are calculated incorrectly (file offsets + file size)
+    // For looping sounds, we simply loop the entire parsed sample data
+    v->loop_start = looping ? sample_data : NULL;
+    v->loop_end = looping ? sample_data + sample_length : NULL;
     v->looping = looping;
     
     v->is_16bit = is_16bit;
@@ -806,8 +865,11 @@ int I_PicoSound_PlayWAV(const uint8_t *data, uint32_t length,
     
     v->data = sample_data;
     v->data_end = sample_data + sample_length;
-    v->loop_start = looping ? sample_data + loopstart : NULL;
-    v->loop_end = looping ? sample_data + loopend : NULL;
+    
+    // NOTE: Duke3D's loopstart/loopend are calculated incorrectly (file offsets + file size)
+    // For looping sounds, we simply loop the entire parsed sample data
+    v->loop_start = looping ? sample_data : NULL;
+    v->loop_end = looping ? sample_data + sample_length : NULL;
     v->looping = looping;
     
     v->is_16bit = is_16bit;

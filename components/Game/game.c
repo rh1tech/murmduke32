@@ -5782,7 +5782,8 @@ void animatesprites(int32_t x,int32_t y,short a,int32_t smoothratio)
                         tsprite[spritesortcnt].yrepeat = 16;
                     }
                     tsprite[spritesortcnt].pal = 0;
-                    spritesortcnt++;
+                    if (spritesortcnt < MAXSPRITESONSCREEN - 1)
+                        spritesortcnt++;
                 }
 
                 if(s->owner == -1)
@@ -6013,7 +6014,8 @@ void animatesprites(int32_t x,int32_t y,short a,int32_t smoothratio)
 
                     yrep = tsprite[spritesortcnt].yrepeat;// - (klabs(daz-t->z)>>11);
                     tsprite[spritesortcnt].yrepeat = yrep;
-                    spritesortcnt++;
+                    if (spritesortcnt < MAXSPRITESONSCREEN - 1)
+                        spritesortcnt++;
                 }
             }
 
@@ -8925,9 +8927,17 @@ int32_t playback(void)
 
     k = 0;
 
+    // Debug counter for demo loop
+    static uint32_t demo_loop_count = 0;
+
     while (ud.reccnt > 0 || foundemo == 0)
     {
-
+        demo_loop_count++;
+        if ((demo_loop_count % 100) == 0 || demo_loop_count > 110) {
+            printf("DEMO: loop=%lu reccnt=%d tc=%ld lc=%ld\n", 
+                   (unsigned long)demo_loop_count, (int)ud.reccnt,
+                   (long)totalclock, (long)lockclock);
+        }
         if(foundemo) while ( totalclock >= (lockclock+TICSPERFRAME) )
         {
             if ((i == 0) || (i >= RECSYNCBUFSIZ))
@@ -8958,7 +8968,15 @@ int32_t playback(void)
             }
 
             j = min(max((totalclock-lockclock)*(65536/TICSPERFRAME),0),65536);
+            
+            // Debug: track where crash occurs
+            if (demo_loop_count >= 95) {
+                printf("FRAME %lu: displayrooms start\n", (unsigned long)demo_loop_count);
+            }
             displayrooms(screenpeek,j);
+            if (demo_loop_count >= 95) {
+                printf("FRAME %lu: displayrest start\n", (unsigned long)demo_loop_count);
+            }
             displayrest(j);
 
             if(ud.multimode > 1 && ps[myconnectindex].gm )
@@ -9539,6 +9557,12 @@ uint8_t  domovethings(void)
     short i, j;
     uint8_t  ch;
 
+    // Heartbeat for debugging hangs
+    static uint32_t move_count = 0;
+    move_count++;
+    if ((move_count % 500) == 0) {
+        printf("MOVE: %lu\n", (unsigned long)move_count);
+    }
 
     for(i=connecthead;i>=0;i=connectpoint2[i])
         if( sync[i].bits&(1<<17) )

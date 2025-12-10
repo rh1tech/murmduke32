@@ -20,4 +20,6 @@ void psram_set_temp_offset(size_t offset);
 
 void psram_set_sram_mode(int enable); // Force SRAM allocation for proper malloc/free
 
+void psram_print_stats(void); // Print memory usage stats
+
 #endif
