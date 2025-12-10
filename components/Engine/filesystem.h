@@ -34,6 +34,11 @@ void     kclose(int32_t handle);
 void     kdfread(void *buffer, size_t dasizeof, size_t count, int32_t fil);
 void     dfread(void *buffer, size_t dasizeof, size_t count, FILE *fil);
 void     dfwrite(void *buffer, size_t dasizeof, size_t count, FILE *fil);
+#ifdef RP2350_PSRAM
+void     kdfread_raw(void *buffer, size_t dasizeof, size_t count, int32_t fil);
+void     dfread_raw(void *buffer, size_t dasizeof, size_t count, FILE *fil);
+void     dfwrite_raw(void *buffer, size_t dasizeof, size_t count, FILE *fil);
+#endif
 
 int      getGRPcrc32(int grpID);
 

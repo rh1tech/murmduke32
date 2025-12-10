@@ -647,6 +647,14 @@ void kdfread(void *buffer, size_t dasizeof, size_t count, int32_t fil)
 	lzwbuflock[0] = lzwbuflock[1] = lzwbuflock[2] = lzwbuflock[3] = lzwbuflock[4] = 1;
 }
 
+#ifdef RP2350_PSRAM
+// Raw read without LZW decompression for RP2350 (kernel file handle version)
+void kdfread_raw(void *buffer, size_t dasizeof, size_t count, int32_t fil)
+{
+    kread(fil, buffer, dasizeof * count);
+}
+#endif
+
 void dfread(void *buffer, size_t dasizeof, size_t count, FILE *fil)
 {
 	size_t i, j;
@@ -691,6 +699,14 @@ void dfread(void *buffer, size_t dasizeof, size_t count, FILE *fil)
 	lzwbuflock[0] = lzwbuflock[1] = lzwbuflock[2] = lzwbuflock[3] = lzwbuflock[4] = 1;
 	SDL_UnlockDisplay();
 }
+
+#ifdef RP2350_PSRAM
+// Raw read without LZW decompression for RP2350
+void dfread_raw(void *buffer, size_t dasizeof, size_t count, FILE *fil)
+{
+    fread(buffer, dasizeof, count, fil);
+}
+#endif
 
 void dfwrite(void *buffer, size_t dasizeof, size_t count, FILE *fil)
 {
@@ -737,6 +753,13 @@ void dfwrite(void *buffer, size_t dasizeof, size_t count, FILE *fil)
 	SDL_UnlockDisplay();
 }
 
+#ifdef RP2350_PSRAM
+// Raw write without LZW compression for RP2350 - saves memory and avoids cache contention
+void dfwrite_raw(void *buffer, size_t dasizeof, size_t count, FILE *fil)
+{
+    fwrite(buffer, dasizeof, count, fil);
+}
+#endif
 
 
 //int SafeFileExists ( const char  * _filename );

@@ -35,6 +35,10 @@ Prepared for public release: 03/21/2003 - Charlie Wiederhold, 3D Realms
 #include "display.h"
 #ifdef RP2350_PSRAM
 #include "psram_sections.h"
+// Use raw (uncompressed) file I/O for RP2350 to avoid cache/memory issues
+#define kdfread kdfread_raw
+#define dfwrite dfwrite_raw
+#define dfread dfread_raw
 #endif
 
 static const char* TAG = "menues";
@@ -276,8 +280,10 @@ int loadplayer(int8_t spot)
 		ready2send = 0;
 
      kdfread(&bv,4,1,fil);
+     printf("loadplayer: read BYTEVERSION=%d, expected=%d\n", bv, BYTEVERSION);
      if(bv != BYTEVERSION)
      {
+        printf("loadplayer: BYTEVERSION mismatch!\n");
         FTA(114,&ps[myconnectindex],1);
         kclose(fil);
 		if(ud.recstat != 2)
@@ -290,8 +296,10 @@ int loadplayer(int8_t spot)
      }
 
      kdfread(&nump,sizeof(nump),1,fil);
+     printf("loadplayer: nump=%d, numplayers=%d\n", (int)nump, numplayers);
      if(nump != numplayers)
      {
+        printf("loadplayer: numplayers mismatch!\n");
         kclose(fil);
 		if(ud.recstat != 2)
 		{
@@ -358,7 +366,7 @@ int loadplayer(int8_t spot)
          kdfread(&nextspritestat[0],2,MAXSPRITES,fil);
          kdfread(&numcyclers,sizeof(numcyclers),1,fil);
          kdfread(&cyclers[0][0],12,MAXCYCLERS,fil);
-     kdfread(ps,sizeof(ps),1,fil);
+     kdfread(ps,sizeof(struct player_struct)*MAXPLAYERS,1,fil);
      kdfread(po,sizeof(po),1,fil);
          kdfread(&numanimwalls,sizeof(numanimwalls),1,fil);
          kdfread(&animwall,sizeof(animwall),1,fil);
@@ -454,6 +462,7 @@ int loadplayer(int8_t spot)
      kdfread(&parallaxyscale,sizeof(parallaxyscale),1,fil);
 
      kclose(fil);
+     printf("loadplayer: file closed, restoring game state\n");
 
      if(ps[myconnectindex].over_shoulder_on != 0)
      {
@@ -464,24 +473,36 @@ int loadplayer(int8_t spot)
 
      screenpeek = myconnectindex;
 
+     printf("loadplayer: clearing gotpic\n");
      clearbufbyte(gotpic,sizeof(gotpic),0L);
      clearsoundlocks();
+     printf("loadplayer: cacheit\n");
          cacheit();
+     printf("loadplayer: docacheit\n");
      docacheit();
+     printf("loadplayer: cache done\n");
 
      if(music_changed == 0)
         music_select = (ud.volume_number*11) + ud.level_number;
      playmusic(&music_fn[0][music_select][0]);
 
+     printf("loadplayer: setting MODE_GAME\n");
      ps[myconnectindex].gm = MODE_GAME;
          ud.recstat = 0;
+
+     printf("loadplayer: player pos=(%d,%d,%d) ang=%d cursectnum=%d\n",
+            ps[myconnectindex].posx, ps[myconnectindex].posy, 
+            ps[myconnectindex].posz, ps[myconnectindex].ang,
+            ps[myconnectindex].cursectnum);
 
      if(ps[myconnectindex].jetpack_on)
          spritesound(DUKE_JETPACK_IDLE,ps[myconnectindex].i);
 
      restorepalette = 1;
      setpal(&ps[myconnectindex]);
+     printf("loadplayer: vscrn\n");
      vscrn();
+     printf("loadplayer: done\n");
 
      FX_SetReverb(0);
 
@@ -580,6 +601,8 @@ int saveplayer(int8_t spot)
      int32_t bv = BYTEVERSION;
 	 char  fullpathsavefilename[16];
 
+     printf("saveplayer: spot=%d\n", spot);
+
      if(spot < 0)
      {
         multiflag = 1;
@@ -588,7 +611,9 @@ int saveplayer(int8_t spot)
         return -1;
      }
 
+     printf("saveplayer: waitforeverybody\n");
      waitforeverybody();
+     printf("saveplayer: waitforeverybody done\n");
 
      if( multiflag == 2 && multiwho != myconnectindex )
      {
@@ -610,6 +635,10 @@ int saveplayer(int8_t spot)
 
 
 	// Are we loading a TC?
+#ifdef RP2350_PSRAM
+	// On RP2350, save to root of SD card for simplicity
+	sprintf(fullpathsavefilename, "%s", fnptr);
+#else
 	if(getGameDir()[0] != '\0')
 	{
 		// Yes
@@ -620,8 +649,14 @@ int saveplayer(int8_t spot)
 		// No 
 		sprintf(fullpathsavefilename, "%s", fnptr);
 	}
+#endif
 
-     if ((fil = fopen(fullpathsavefilename,"wb")) == 0) return(-1);
+     printf("saveplayer: opening %s\n", fullpathsavefilename);
+     if ((fil = fopen(fullpathsavefilename,"wb")) == 0) {
+         printf("saveplayer: fopen failed!\n");
+         return(-1);
+     }
+     printf("saveplayer: file opened, writing...\n");
 
      ready2send = 0;
 
@@ -647,7 +682,7 @@ int saveplayer(int8_t spot)
          dfwrite(&nextspritestat[0],2,MAXSPRITES,fil);
          dfwrite(&numcyclers,sizeof(numcyclers),1,fil);
          dfwrite(&cyclers[0][0],12,MAXCYCLERS,fil);
-     dfwrite(ps,sizeof(ps),1,fil);
+     dfwrite(ps,sizeof(struct player_struct)*MAXPLAYERS,1,fil);
      dfwrite(po,sizeof(po),1,fil);
          dfwrite(&numanimwalls,sizeof(numanimwalls),1,fil);
          dfwrite(&animwall,sizeof(animwall),1,fil);
@@ -780,7 +815,9 @@ int saveplayer(int8_t spot)
      dfwrite(&global_random,sizeof(global_random),1,fil);
      dfwrite(&parallaxyscale,sizeof(parallaxyscale),1,fil);
 
+     printf("saveplayer: closing file\n");
          fclose(fil);
+     printf("saveplayer: file closed\n");
 
      if(ud.multimode < 2)
      {
@@ -790,7 +827,9 @@ int saveplayer(int8_t spot)
 
      ready2send = 1;
 
+     printf("saveplayer: final waitforeverybody\n");
      waitforeverybody();
+     printf("saveplayer: done\n");
 
      ototalclock = totalclock;
 

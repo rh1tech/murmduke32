@@ -39,6 +39,11 @@ Prepared for public release: 03/21/2003 - Charlie Wiederhold, 3D Realms
 #include "build.h"
 #include "SDL.h"
 
+#ifdef RP2350_PSRAM
+// Use raw (uncompressed) file I/O for RP2350 to match menues.c save format
+#define dfread dfread_raw
+#endif
+
 // we load this in to get default button and key assignments
 // as well as setting up function mappings
 
@@ -567,6 +572,10 @@ void readsavenames(void)
 
         fn[4] = i+'0';
 
+#ifdef RP2350_PSRAM
+		// On RP2350, save files are in root of SD card
+		sprintf(fullpathsavefilename, "%s", fn);
+#else
 		// Are we loading a TC?
 		if(getGameDir()[0] != '\0')
 		{
@@ -578,6 +587,7 @@ void readsavenames(void)
 			// No 
 			sprintf(fullpathsavefilename, "%s", fn);
 		}
+#endif
 
         if ((fil = fopen(fullpathsavefilename,"rb")) == NULL ) continue;
         dfread(&dummy,4,1,fil);

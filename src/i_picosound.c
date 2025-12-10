@@ -711,6 +711,7 @@ extern void psram_print_stats(void);
 void I_PicoSound_Update(void) {
     if (!sound_initialized) return;
     
+#if 0  // Disable periodic status debug output
     // Periodic status report to detect hangs and memory issues
     static uint32_t update_count = 0;
     update_count++;
@@ -718,6 +719,7 @@ void I_PicoSound_Update(void) {
         printf("SND: update=%lu mix=%lu\n", (unsigned long)update_count, (unsigned long)mix_iteration_count);
         psram_print_stats();
     }
+#endif
     
     // Process audio buffers - decompress_buffer is called inline during mixing
     // This is the murmdoom pattern: PSRAM access happens inside the mix loop
