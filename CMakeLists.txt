@@ -79,6 +79,14 @@ set(GAME_SOURCES
 set(SOUND_SOURCES
     src/i_picosound.c
     src/audio_stub.c
+    src/i_music.c
+)
+
+# OPL Music system - emu8950 emulator and MIDI parser
+set(OPL_SOURCES
+    src/opl/emu8950.c
+    src/opl/emuadpcm.c
+    src/opl/midifile.c
 )
 
 add_executable(murmduke3d
@@ -94,6 +102,7 @@ add_executable(murmduke3d
     ${ENGINE_SOURCES}
     ${GAME_SOURCES}
     ${SOUND_SOURCES}
+    ${OPL_SOURCES}
 )
 
 target_include_directories(murmduke3d PRIVATE
@@ -101,6 +110,7 @@ target_include_directories(murmduke3d PRIVATE
     src/SDL
     src/fatfs
     src/freertos
+    src/opl
     components/Engine
     components/Game
     components/audiolib
@@ -127,6 +137,11 @@ target_compile_definitions(murmduke3d PRIVATE
     PICO_AUDIO_I2S_STATE_MACHINE=2
     PICO_AUDIO_I2S_DMA_IRQ=1
     NUM_SOUND_CHANNELS=8
+    # OPL emulator configuration
+    USE_EMU8950_OPL=1
+    EMU8950_NO_TIMER=1
+    EMU8950_NO_RATECONV=1
+    EMU8950_SLOT_RENDER=0
 )
 
 # Add I2S pin definitions based on board variant

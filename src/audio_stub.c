@@ -356,9 +356,12 @@ void FX_StopRecord(void) {
     // Not implemented
 }
 
-// ============= MUSIC Stub (no music yet) =============
+// ============= MUSIC Implementation using OPL emulator =============
+
+#include "i_music.h"
 
 int MUSIC_ErrorCode = MUSIC_Ok;
+static int music_loop_flag = 1;
 
 char *MUSIC_ErrorString(int ErrorNumber) {
     switch (ErrorNumber) {
@@ -370,38 +373,113 @@ char *MUSIC_ErrorString(int ErrorNumber) {
 }
 
 int MUSIC_Init(int SoundCard, int Address) {
-    printf("MUSIC_Init: Music disabled (sound effects only)\n");
-    return MUSIC_Ok;
+    printf("MUSIC_Init: Initializing OPL music\n");
+    if (I_Music_Init()) {
+        return MUSIC_Ok;
+    }
+    return MUSIC_Error;
 }
 
 int MUSIC_Shutdown(void) {
+    I_Music_Shutdown();
     return MUSIC_Ok;
 }
 
-void MUSIC_SetMaxFMMidiChannel(int channel) {}
-void MUSIC_SetVolume(int volume) {}
-void MUSIC_SetMidiChannelVolume(int channel, int volume) {}
-void MUSIC_ResetMidiChannelVolumes(void) {}
-int MUSIC_GetVolume(void) { return 0; }
-void MUSIC_SetLoopFlag(int loopflag) {}
-int MUSIC_SongPlaying(void) { return 0; }
-void MUSIC_Continue(void) {}
-void MUSIC_Pause(void) {}
-int MUSIC_StopSong(void) { return MUSIC_Ok; }
-int MUSIC_PlaySong(char *song, int loopflag) { return MUSIC_Ok; }
-void MUSIC_SetContext(int context) {}
-int MUSIC_GetContext(void) { return 0; }
-void MUSIC_SetSongTick(uint32_t PositionInTicks) {}
-void MUSIC_SetSongTime(uint32_t milliseconds) {}
-void MUSIC_SetSongPosition(int measure, int beat, int tick) {}
+void MUSIC_SetMaxFMMidiChannel(int channel) {
+    // Not needed for OPL emulator
+}
+
+void MUSIC_SetVolume(int volume) {
+    I_Music_SetVolume(volume);
+}
+
+void MUSIC_SetMidiChannelVolume(int channel, int volume) {
+    // Per-channel volume not implemented
+}
+
+void MUSIC_ResetMidiChannelVolumes(void) {
+    // Not implemented
+}
+
+int MUSIC_GetVolume(void) { 
+    return I_Music_GetVolume(); 
+}
+
+void MUSIC_SetLoopFlag(int loopflag) {
+    music_loop_flag = loopflag;
+}
+
+int MUSIC_SongPlaying(void) { 
+    return I_Music_IsPlaying() ? 1 : 0; 
+}
+
+void MUSIC_Continue(void) {
+    I_Music_Resume();
+}
+
+void MUSIC_Pause(void) {
+    I_Music_Pause();
+}
+
+int MUSIC_StopSong(void) { 
+    I_Music_Stop();
+    return MUSIC_Ok; 
+}
+
+int MUSIC_PlaySong(char *song, int loopflag) { 
+    // Note: Duke3D calls PlayMusic() which loads from file,
+    // this function is for playing from memory which we don't support
+    printf("MUSIC_PlaySong: Not supported (use PlayMusic for file-based playback)\n");
+    return MUSIC_Ok; 
+}
+
+void MUSIC_SetContext(int context) {
+    // Not implemented
+}
+
+int MUSIC_GetContext(void) { 
+    return 0; 
+}
+
+void MUSIC_SetSongTick(uint32_t PositionInTicks) {
+    // Not implemented
+}
+
+void MUSIC_SetSongTime(uint32_t milliseconds) {
+    // Not implemented
+}
+
+void MUSIC_SetSongPosition(int measure, int beat, int tick) {
+    // Not implemented
+}
+
 void MUSIC_GetSongPosition(songposition *pos) {
     if (pos) memset(pos, 0, sizeof(*pos));
 }
+
 void MUSIC_GetSongLength(songposition *pos) {
     if (pos) memset(pos, 0, sizeof(*pos));
 }
-int MUSIC_FadeVolume(int tovolume, int milliseconds) { return MUSIC_Ok; }
-int MUSIC_FadeActive(void) { return 0; }
-void MUSIC_StopFade(void) {}
-void MUSIC_RerouteMidiChannel(int channel, int (*function)(int event, int c1, int c2)) {}
-void MUSIC_RegisterTimbreBank(uint8_t *timbres) {}
+
+int MUSIC_FadeVolume(int tovolume, int milliseconds) { 
+    // Instant volume change for now
+    I_Music_SetVolume(tovolume);
+    return MUSIC_Ok; 
+}
+
+int MUSIC_FadeActive(void) { 
+    return 0; 
+}
+
+void MUSIC_StopFade(void) {
+    // Nothing to do
+}
+
+void MUSIC_RerouteMidiChannel(int channel, int (*function)(int event, int c1, int c2)) {
+    // Not implemented
+}
+
+void MUSIC_RegisterTimbreBank(uint8_t *timbres) {
+    I_Music_RegisterTimbreBank(timbres);
+}
+

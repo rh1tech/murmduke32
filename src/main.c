@@ -47,9 +47,9 @@ int main() {
     
     printf("Starting Duke Nukem 3D...\n");
 
-    // Launch Duke3D with no music (/nm)
-    char *argv[] = {"duke3d", "/nm", NULL};
-    main_duke3d(2, argv);
+    // Launch Duke3D with music enabled
+    char *argv[] = {"duke3d", NULL};
+    main_duke3d(1, argv);
 
     // Should never reach here
     while (1) {

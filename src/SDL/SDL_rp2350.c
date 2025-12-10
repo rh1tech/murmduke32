@@ -123,6 +123,7 @@ int SDL_JoystickNumBalls(SDL_Joystick *joystick) {
     return 0;
 }
 
+
 int SDL_JoystickEventState(int state) {
     return 0;
 }
@@ -136,9 +137,23 @@ SDL_GrabMode SDL_WM_GrabInput(SDL_GrabMode mode) {
     return mode;
 }
 
-// PlayMusic stub (ESP32 port function for music playback)
+// PlayMusic - Load and play MIDI file using OPL emulator
+#include "../i_music.h"
+
 int PlayMusic(const char *filename) {
-    // Music disabled for RP2350
-    printf("PlayMusic: %s (disabled)\n", filename ? filename : "(null)");
+    if (!filename || !filename[0]) {
+        printf("PlayMusic: No filename provided\n");
+        return 0;
+    }
+
+    printf("PlayMusic: Playing %s\n", filename);
+    
+    // Play the MIDI file with looping enabled
+    if (I_Music_PlayMIDI(filename, true)) {
+        return 1;  // Success
+    }
+    
+    printf("PlayMusic: Failed to play %s\n", filename);
     return 0;
 }
+
