@@ -996,6 +996,9 @@ void CONFIG_ReadSetup_RP2350(void)
     // Set defaults first
     CONFIG_SetDefaults();
     
+    // Set up key mappings (essential for game controls!)
+    CONFIG_ReadKeys();
+    
     fp = fopen(rp2350_config_filename, "rb");
     if (!fp) {
         printf("Config file %s not found, using defaults\n", rp2350_config_filename);
