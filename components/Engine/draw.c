@@ -6,6 +6,17 @@
 /* DDOI - This file is an attempt to reimplement a_nasm.asm in C */
 /* FCS: However did that work: This is far from perfect but you have my eternal respect !!! */
 
+// RP2350: Optimization - skip debug pixel counter checks
+// The pixelsAllowed check is a debug feature that counts pixels rendered.
+// On RP2350, we want maximum performance, so always render without counting.
+#ifdef RP2350_PSRAM
+#pragma GCC optimize("O3")
+// Redefine the check to always be true (compiler optimizes it away completely)
+#define PIXEL_ALLOWED() (1)
+#else
+#define PIXEL_ALLOWED() (pixelsAllowed-- > 0)
+#endif
+
 #include "platform.h"
 #include "build.h"
 #include "draw.h"
@@ -74,7 +85,7 @@ IRAM_ATTR void hlineasm4(int32_t numPixels, int32_t shade, uint32_t i4, uint32_t
 	    source = shld(source,i4,bits);
 	    source = texture[source];
         
-		if (pixelsAllowed-- > 0)
+		if (PIXEL_ALLOWED())
 			*dest = globalpalwritten[shade|source];
         
 	    dest--;
@@ -128,7 +139,7 @@ IRAM_ATTR void rhlineasm4(int32_t i1, uint8_t* texture, int32_t i3, uint32_t i4,
 	    ebp &= rmach_esi;
 	    i1 = ((i1&0xffffff00)|(((uint8_t *)i3)[rmach_edx]));
 
-		if (pixelsAllowed-- > 0)
+		if (PIXEL_ALLOWED())
 			 ((uint8_t *)rmach6b)[numPixels] = (i1&0xff);
 
 	    texture -= ebp;
@@ -180,7 +191,7 @@ IRAM_ATTR void rmhlineasm4(int32_t i1, intptr_t shade, int32_t colorIndex, int32
         
         //Check if this colorIndex is the transparent color (255).
 	    if ((colorIndex&0xff) != 255) {
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 			{
 				i1 = ((i1&0xffffff00)|(((uint8_t  *)colorIndex)[rmmach_edx]));
 				((uint8_t  *)rmach6b)[numPixels] = (i1&0xff);
@@ -220,7 +231,7 @@ IRAM_ATTR int32_t prevlineasm1(int32_t i1, uint8_t* palette, int32_t i3, int32_t
         i4 = ((uint32_t)i4) >> mach3_al;
 	    i4 = (i4&0xffffff00) | source[i4];
 
-		if (pixelsAllowed-- > 0)
+		if (PIXEL_ALLOWED())
 			*dest = palette[i4];
 
 		
@@ -247,7 +258,7 @@ IRAM_ATTR int32_t vlineasm1(int32_t vince, uint8_t* palookupoffse, int32_t numPi
         
 	    temp = texture[temp];
       
-		if (pixelsAllowed-- > 0)
+		if (PIXEL_ALLOWED())
 			*dest = palookupoffse[temp];
 	    
 		vplce += vince;
@@ -280,7 +291,7 @@ IRAM_ATTR int32_t tvlineasm1(int32_t i1, uint8_t  * texture, int32_t numPixels, 
 			if (transrev) 
 				colorIndex = ((colorIndex>>8)|(colorIndex<<8));
             
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 				*dest = transluc[colorIndex];
 		}
         
@@ -334,7 +345,7 @@ IRAM_ATTR void tvlineasm2(uint32_t i1, uint32_t i2, uintptr_t i3, uintptr_t i4, 
 				if (transrev) 
 					val = ((val>>8)|(val<<8));
 
-				if (pixelsAllowed-- > 0)
+				if (PIXEL_ALLOWED())
 					((uint8_t  *)i6)[tran2edi1] = transluc[val];
 			}
 		} else if (i4 == 255) { // skipdraw2
@@ -345,7 +356,7 @@ IRAM_ATTR void tvlineasm2(uint32_t i1, uint32_t i2, uintptr_t i3, uintptr_t i4, 
 			if (transrev) 
                 val = ((val>>8)|(val<<8));
 
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 				((uint8_t  *)i6)[tran2edi] = transluc[val];
 		} else {
 			uint16_t l = ((uint8_t  *)i6)[tran2edi]<<8;
@@ -356,11 +367,13 @@ IRAM_ATTR void tvlineasm2(uint32_t i1, uint32_t i2, uintptr_t i3, uintptr_t i4, 
 				l = ((l>>8)|(l<<8));
 				r = ((r>>8)|(r<<8));
 			}
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 			{
 				((uint8_t  *)i6)[tran2edi] = transluc[l];
 				((uint8_t  *)i6)[tran2edi1] =transluc[r];
+#ifndef RP2350_PSRAM
 				pixelsAllowed--;
+#endif
 			}
 		}
 		i6 += bytesperline;
@@ -383,7 +396,7 @@ IRAM_ATTR int32_t mvlineasm1(int32_t vince, uint8_t* palookupoffse, int32_t i3, 
 
 	    if (temp != 255) 
 		{
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 			*dest = palookupoffse[temp];
 		}
 
@@ -422,7 +435,7 @@ IRAM_ATTR void vlineasm4(int32_t columnIndex, intptr_t framebuffer)
         	    temp = ((uint32_t)vplce[i]) >> mach3_al;
         	    temp = (((uint8_t *)(bufplce[i]))[temp]);
                 
-				if (pixelsAllowed-- > 0)
+				if (PIXEL_ALLOWED())
         			dest[index+i] = palookupoffse [i] [temp];
                 
 	            vplce[i] += vince[i];
@@ -459,7 +472,7 @@ IRAM_ATTR void mvlineasm4(int32_t column, intptr_t framebufferOffset)
 	      temp = (((uint8_t *)(bufplce[i]))[temp]);
 	      if (temp != 255)
 		  {
-			  if (pixelsAllowed-- > 0)
+			  if (PIXEL_ALLOWED())
 				dest[index+i] = palookupoffse[i][temp];
 		  }
 	      vplce[i] += vince[i];
@@ -531,7 +544,7 @@ setup:
         
         i1 = (i1&0xffffff00) | (((uint8_t  *)spal_eax)[i1]&0xff);
         
-        if (pixelsAllowed-- > 0)
+        if (PIXEL_ALLOWED())
             *dest = i1;
         
         dest += bytesperline;
@@ -591,7 +604,7 @@ setup:
         {
             colorIndex = (colorIndex&0xffffff00) | (((uint8_t  *)spal_eax)[colorIndex]&0xff);
             
-            if (pixelsAllowed-- > 0)
+            if (PIXEL_ALLOWED())
                 *dest = colorIndex;
         }
    
@@ -671,7 +684,7 @@ IRAM_ATTR void DrawSpriteVerticalLine(int32_t i2, int32_t numPixels, uint32_t i4
 
 				colorIndex = transluc[val];
 
-				if (pixelsAllowed-- > 0)
+				if (PIXEL_ALLOWED())
 					*dest = colorIndex;
 			}
             
@@ -743,7 +756,7 @@ void mhlineskipmodify( uint32_t i2, int32_t numPixels, int32_t i5, uint8_t* dest
 
         //Skip transparent color.
 		if ((colorIndex&0xff) != 0xff){
-            if (pixelsAllowed-- > 0)
+            if (PIXEL_ALLOWED())
 				*dest = mmach_asm3[colorIndex];
         }
 	    i2 += mmach_asm1;
@@ -797,7 +810,7 @@ void thlineskipmodify(int32_t i1, uint32_t i2, uint32_t i3, int32_t i4, int32_t 
 		    if (transrev) 
 				val = ((val>>8)|(val<<8));
 
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 			 *i6 = transluc[val];
 	    }
 
@@ -903,7 +916,7 @@ void slopevlin(intptr_t i1, uint32_t i2, int32_t i3, int32_t i4, int32_t i5, int
 		    eax = ((eax&0xffffff00)|(*((uint8_t  *)(ebx+edx))));
 		    ebx = esi;
 
-			if (pixelsAllowed-- > 0)
+			if (PIXEL_ALLOWED())
 				*((uint8_t  *)i1) = (eax&0xff);
 
 		    edx = edi;

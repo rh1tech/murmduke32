@@ -212,7 +212,6 @@ int SDL_Flip(SDL_Surface *screen) {
     if (!screen || !vid_buffer) return -1;
     
     /* Copy from PSRAM render buffer to SRAM display buffer */
-    /* PSRAM->SRAM is fast because SRAM writes are very quick */
     memcpy(FRAME_BUF, vid_buffer, FRAME_SIZE);
     
     return 0;

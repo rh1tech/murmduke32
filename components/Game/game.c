@@ -6007,6 +6007,7 @@ void animatesprites(int32_t x,int32_t y,short a,int32_t smoothratio)
                 hittype[i].dispicnum++;
                 continue;
             }
+#ifndef RP2350_PSRAM  // Disable shadows on RP2350 for performance
             else if( ud.shadows && spritesortcnt < (MAXSPRITESONSCREEN-2))
             {
                 int32_t daz,xrep,yrep;
@@ -6040,6 +6041,7 @@ void animatesprites(int32_t x,int32_t y,short a,int32_t smoothratio)
                         spritesortcnt++;
                 }
             }
+#endif  // RP2350_PSRAM shadows disabled
 
             if( ps[screenpeek].heat_amount > 0 && ps[screenpeek].heat_on )
             {
