@@ -5,8 +5,6 @@
 #include "pico/stdlib.h"
 #include "hardware/vreg.h"
 #include "hardware/clocks.h"
-#include "hardware/structs/qmi.h"
-#include "hardware/regs/qmi.h"
 #include <stdio.h>
 
 #include "psram_init.h"
@@ -17,49 +15,21 @@
 // Forward declaration of Duke3D main
 extern int main_duke3d(int argc, char *argv[]);
 
-// Overclock settings - adjust these for stability
-// Default: 252MHz at default voltage
-// Moderate OC: 300MHz at VREG_VOLTAGE_1_15
-// High OC: 378MHz at VREG_VOLTAGE_1_60 (requires higher voltage like Quake port)
-#define OVERCLOCK_MHZ 378
-#define OVERCLOCK_VOLTAGE VREG_VOLTAGE_1_60
-
-// Adjust flash timing for overclock (must run from RAM)
-static void __no_inline_not_in_flash_func(flash_timing_for_overclock)(void) {
-    const int clock_hz = OVERCLOCK_MHZ * 1000000;
-    const int max_flash_freq = 133 * 1000000;  // Flash max freq
-    
-    int divisor = (clock_hz + max_flash_freq - 1) / max_flash_freq;
-    if (divisor == 1 && clock_hz >= 166000000) {
-        divisor = 2;
-    }
-    
-    int rxdelay = divisor;
-    if (clock_hz / divisor > 100000000 && clock_hz >= 166000000) {
-        rxdelay += 1;
-    }
-    
-    // Update flash timing register
-    qmi_hw->m[0].timing = 0x60007000 |
-                          rxdelay << QMI_M0_TIMING_RXDELAY_LSB |
-                          divisor << QMI_M0_TIMING_CLKDIV_LSB;
-}
-#define OVERCLOCK_MHZ 378
-#define OVERCLOCK_VOLTAGE VREG_VOLTAGE_1_60
-
 int main() {
-    // Increase core voltage for stable overclocking
-    // WARNING: Higher voltage = more heat, ensure adequate cooling
-    vreg_set_voltage(OVERCLOCK_VOLTAGE);
+    // Overclock support: For speeds > 252 MHz, increase voltage first
+    // NOTE: Do NOT touch flash timing registers (qmi_hw->m[0].timing) - 
+    // this breaks SD card SPI! The SDK handles flash timing automatically.
+#if CPU_CLOCK_MHZ > 252
+    vreg_disable_voltage_limit();
+    vreg_set_voltage(CPU_VOLTAGE);
     sleep_ms(10);  // Wait for voltage to stabilize
+#endif
     
-    // Set system clock first
-    // Note: HDMI needs clock to be divisible for proper pixel clock
-    // 378MHz / 15 = 25.2MHz pixel clock (perfect for 640x480@60Hz)
-    set_sys_clock_khz(OVERCLOCK_MHZ * 1000, true);
-    
-    // Adjust flash timing AFTER changing clock
-    flash_timing_for_overclock();
+    // Set system clock (252 MHz for HDMI, or overclocked)
+    // 640x480@60Hz pixel clock is ~25.2MHz, PIO DVI needs 10x = ~252MHz
+    // 378 MHz / 15 = 25.2 MHz (also works for HDMI)
+    // 504 MHz / 20 = 25.2 MHz (also works for HDMI)
+    set_sys_clock_khz(CPU_CLOCK_MHZ * 1000, true);
 
     stdio_init_all();
     
@@ -69,7 +39,7 @@ int main() {
         sleep_ms(1000);
     }
     
-    printf("System Clock: %lu Hz\n", clock_get_hz(clk_sys));
+    printf("System Clock: %lu Hz (target: %d MHz)\n", clock_get_hz(clk_sys), CPU_CLOCK_MHZ);
     
     // Initialize PSRAM first (required for game data)
     printf("Initializing PSRAM...\n");

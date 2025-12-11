@@ -3,8 +3,51 @@ cmake_minimum_required(VERSION 3.13)
 # Set board to Pico 2 (RP2350)
 set(PICO_BOARD pico2 CACHE STRING "Pico board type")
 
-# Board configuration variant (M1, M2)
+# Board variant (M1, M2)
 set(BOARD_VARIANT "M1" CACHE STRING "Board variant: M1 or M2")
+
+# CPU overclock configuration (252, 378, 504 MHz)
+# 252 = no overclock (default), 378 = medium, 504 = high (Quake port default)
+set(CPU_SPEED "252" CACHE STRING "CPU clock in MHz: 252, 378, 504")
+
+# PSRAM speed configuration (84, 100, 133 MHz target)
+# Actual speed depends on CPU clock divider
+set(PSRAM_SPEED "133" CACHE STRING "PSRAM max frequency in MHz: 84, 100, 133")
+
+# Board-specific GPIO pins
+if(BOARD_VARIANT STREQUAL "M1")
+    # M1 SD Card pins
+    set(SD_PIN_SCK 2)
+    set(SD_PIN_MOSI 3)
+    set(SD_PIN_MISO 4)
+    set(SD_PIN_CS 5)
+    # M1 HDMI base pin (CLK-)
+    set(HDMI_BASE_PIN 6)
+    # M1 PS/2 pins
+    set(PS2_CLK_PIN 0)
+    set(PS2_DATA_PIN 1)
+    # M1 I2S pins
+    set(I2S_DATA_PIN 26)
+    set(I2S_CLK_PIN 27)
+else()
+    # M2 SD Card pins
+    set(SD_PIN_SCK 6)
+    set(SD_PIN_MOSI 7)
+    set(SD_PIN_MISO 4)
+    set(SD_PIN_CS 5)
+    # M2 HDMI base pin (CLK-)
+    set(HDMI_BASE_PIN 12)
+    # M2 PS/2 pins
+    set(PS2_CLK_PIN 2)
+    set(PS2_DATA_PIN 3)
+    # M2 I2S pins
+    set(I2S_DATA_PIN 9)
+    set(I2S_CLK_PIN 10)
+endif()
+
+message(STATUS "Board: ${BOARD_VARIANT}, CPU: ${CPU_SPEED} MHz, PSRAM: ${PSRAM_SPEED} MHz")
+message(STATUS "SD pins: SCK=${SD_PIN_SCK} MOSI=${SD_PIN_MOSI} MISO=${SD_PIN_MISO} CS=${SD_PIN_CS}")
+message(STATUS "HDMI base: ${HDMI_BASE_PIN}, PS/2: CLK=${PS2_CLK_PIN} DATA=${PS2_DATA_PIN}")
 
 include(pico_sdk_import.cmake)
 
@@ -39,6 +82,10 @@ add_library(drivers
 )
 target_include_directories(drivers PUBLIC drivers)
 target_link_libraries(drivers pico_stdlib hardware_dma hardware_pio hardware_spi)
+target_compile_definitions(drivers PUBLIC
+    PSRAM_MAX_FREQ_MHZ=${PSRAM_SPEED}
+    HDMI_BASE_PIN=${HDMI_BASE_PIN}
+)
 
 # Duke3D Engine sources
 set(ENGINE_SOURCES
@@ -120,6 +167,10 @@ target_include_directories(murmduke3d PRIVATE
 
 target_compile_definitions(murmduke3d PRIVATE
     BOARD_${BOARD_VARIANT}
+    # CPU/PSRAM speed configuration
+    CPU_CLOCK_MHZ=${CPU_SPEED}
+    CPU_VOLTAGE=VREG_VOLTAGE_1_60
+    PSRAM_MAX_FREQ_MHZ=${PSRAM_SPEED}
     PLATFORM_SUPPORTS_SDL
     DUKE3D_RP2350
     PLATFORM_ESP32  # Use ESP32 platform code paths
