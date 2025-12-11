@@ -239,10 +239,7 @@ static void process_pending_callbacks(void) {
         processed++;
         
         if (sound_callback) {
-            // Debug: log ALL callbacks to find crash point
-            printf("CB: val=%u q=%d/%d\n", cb_val, pending_callback_head, pending_callback_tail);
             sound_callback(cb_val);
-            printf("CB: done\n");
         }
     }
     
@@ -625,14 +622,6 @@ static void mix_audio_buffer(audio_buffer_t *buffer) {
         }
     }
     
-    // Reduced debug logging to first 3 mix calls only
-    static int mix_logs = 0;
-    if (active_channels > 0 && mix_logs < 3) {
-        printf("MIX: active=%d first=%d,%d\n", 
-               active_channels, samples[0], samples[1]);
-        mix_logs++;
-    }
-    
     buffer->sample_count = sample_count;
     give_audio_buffer(producer_pool, buffer);
 }
@@ -644,13 +633,9 @@ static void mix_audio_buffer(audio_buffer_t *buffer) {
 bool I_PicoSound_Init(int numvoices, int mixrate) {
     if (sound_initialized) return true;
     
-    printf("I_PicoSound_Init: Creating producer pool (rate=%d, voices=%d)\n",
-           PICO_SOUND_SAMPLE_FREQ, NUM_SOUND_CHANNELS);
-    
     // Create audio buffer pool (4 buffers for smooth playback)
     producer_pool = audio_new_producer_pool(&producer_format, 4, PICO_SOUND_BUFFER_SAMPLES);
     if (!producer_pool) {
-        printf("I_PicoSound_Init: Failed to allocate producer pool\n");
         return false;
     }
     
@@ -662,13 +647,8 @@ bool I_PicoSound_Init(int numvoices, int mixrate) {
         .pio_sm = PICO_AUDIO_I2S_STATE_MACHINE,
     };
     
-    printf("I_PicoSound_Init: Setting up I2S (data=%d, clk=%d, DMA=%d, SM=%d)\n",
-           I2S_DATA_PIN, I2S_CLOCK_PIN_BASE,
-           PICO_AUDIO_I2S_DMA_CHANNEL, PICO_AUDIO_I2S_STATE_MACHINE);
-    
     const struct audio_format *output_format = audio_i2s_setup(&audio_format, &config);
     if (!output_format) {
-        printf("I_PicoSound_Init: Failed to setup I2S\n");
         return false;
     }
     
@@ -682,7 +662,6 @@ bool I_PicoSound_Init(int numvoices, int mixrate) {
     // Connect producer to I2S consumer
     bool ok = audio_i2s_connect_extra(producer_pool, false, 0, 0, NULL);
     if (!ok) {
-        printf("I_PicoSound_Init: Failed to connect audio pipeline\n");
         return false;
     }
     
@@ -693,7 +672,6 @@ bool I_PicoSound_Init(int numvoices, int mixrate) {
     memset(voices, 0, sizeof(voices));
     
     sound_initialized = true;
-    printf("I_PicoSound_Init: Sound system initialized\n");
     return true;
 }
 
@@ -702,7 +680,6 @@ void I_PicoSound_Shutdown(void) {
     
     audio_i2s_set_enabled(false);
     sound_initialized = false;
-    printf("I_PicoSound_Shutdown: Sound system shut down\n");
 }
 
 // Forward declaration
@@ -729,7 +706,6 @@ void I_PicoSound_Update(void) {
         mix_audio_buffer(buffer);
         buffers_processed++;
         if (buffers_processed > 10) {
-            printf("SND: Too many buffers in one update!\n");
             break;
         }
     }
@@ -762,12 +738,6 @@ int I_PicoSound_PlayVOC(const uint8_t *data, uint32_t length,
         sample_rate = samplerate > 0 ? samplerate : 11025;
         is_16bit = false;
         codec = 0;
-    }
-    
-    // Log looping sounds for debugging
-    if (looping) {
-        printf("LOOP VOC: cb=%u len=%u samp_len=%u rate=%u codec=%d\n",
-               callbackval, length, sample_length, sample_rate, codec);
     }
     
     // For ADPCM, we need to handle it specially
@@ -824,13 +794,6 @@ int I_PicoSound_PlayVOC(const uint8_t *data, uint32_t length,
     v->right_vol = right > 255 ? 255 : (right < 0 ? 0 : right);
     v->priority = priority;
     v->callback_val = callbackval;
-    
-    // Reduced logging
-    static int voc_logs = 0;
-    if (voc_logs++ < 5) {
-        printf("PlayVOC[%d]: rate=%d bufSz=%d L=%d R=%d\n", 
-               slot, (int)sample_rate, (int)v->buffer_size, v->left_vol, v->right_vol);
-    }
 
 #if SOUND_LOW_PASS
     v->alpha256 = (256 * 201 * sample_rate) / (201 * sample_rate + 64 * PICO_SOUND_SAMPLE_FREQ);
@@ -905,9 +868,6 @@ int I_PicoSound_PlayWAV(const uint8_t *data, uint32_t length,
     v->right_vol = right > 255 ? 255 : (right < 0 ? 0 : right);
     v->priority = priority;
     v->callback_val = callbackval;
-    
-    printf("PlayWAV[%d]: rate=%d bufSz=%d L=%d R=%d\n", 
-           slot, (int)sample_rate, (int)v->buffer_size, v->left_vol, v->right_vol);
 
 #if SOUND_LOW_PASS
     v->alpha256 = (256 * 201 * sample_rate) / (201 * sample_rate + 64 * PICO_SOUND_SAMPLE_FREQ);
@@ -930,7 +890,6 @@ int I_PicoSound_PlayRaw(const uint8_t *data, uint32_t length,
     // Find a voice slot
     int slot = find_voice_slot(priority);
     if (slot < 0) {
-        printf("I_PicoSound_PlayRaw: No voice slot available\n");
         return 0;
     }
     
@@ -980,15 +939,6 @@ int I_PicoSound_PlayRaw(const uint8_t *data, uint32_t length,
     v->active = true;
     
     int handle = (next_handle++ % 10000) * NUM_SOUND_CHANNELS + slot + 1;
-    
-    // Debug print (limit to first few sounds)
-    static int play_logs = 0;
-    if (play_logs < 8) {
-        printf("PlayRaw: slot=%d rate=%lu pitch=%d step=%lu len=%lu L=%d R=%d\n",
-               slot, (unsigned long)samplerate, pitchoffset, (unsigned long)v->step, (unsigned long)length,
-               v->left_vol, v->right_vol);
-        play_logs++;
-    }
     
     return handle;
 }

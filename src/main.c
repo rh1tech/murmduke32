@@ -33,25 +33,20 @@ int main() {
 
     stdio_init_all();
     
-    // Wait for USB connection for debugging
+    // Brief startup delay for USB serial connection
     for (int i = 0; i < 3; i++) {
         printf("murmduke3d: Starting in %d...\n", 3 - i);
         sleep_ms(1000);
     }
     
-    printf("System Clock: %lu Hz (target: %d MHz)\n", clock_get_hz(clk_sys), CPU_CLOCK_MHZ);
+    printf("System Clock: %lu Hz\n", clock_get_hz(clk_sys));
     
-    // Initialize PSRAM first (required for game data)
-    printf("Initializing PSRAM...\n");
+    // Initialize PSRAM (required for game data)
     uint psram_pin = get_psram_pin();
     psram_init(psram_pin);
-    printf("PSRAM initialized on GPIO %u\n", psram_pin);
     
     // Initialize PSRAM linker sections (copy .psram_data, zero .psram_bss)
-    printf("Initializing PSRAM sections...\n");
     psram_sections_init();
-    printf("PSRAM sections: data=%zu bytes, bss=%zu bytes\n", 
-           psram_data_size(), psram_bss_size());
     
     // Allocate game data arrays in PSRAM
     psram_data_init();

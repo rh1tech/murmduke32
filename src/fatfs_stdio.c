@@ -208,7 +208,6 @@ FILE *__wrap_fopen(const char *filename, const char *mode) {
     
     idx = find_free_handle();
     if (idx < 0) {
-        printf("fopen: no free handle for %s\n", filename);
         errno = ENOMEM;
         return NULL;
     }
@@ -225,16 +224,12 @@ FILE *__wrap_fopen(const char *filename, const char *mode) {
         if (strchr(mode, '+')) fatfs_mode |= FA_READ;
     }
     
-    printf("fopen: %s mode=%s fatfs_mode=0x%02x\n", filename, mode, fatfs_mode);
     fr = f_open(&file_handles[idx].fil, filename, fatfs_mode);
     
     if (fr != FR_OK) {
-        printf("fopen: f_open failed with error %d\n", fr);
         errno = (fr == FR_NO_FILE || fr == FR_NO_PATH) ? ENOENT : EIO;
         return NULL;
     }
-    
-    printf("fopen: success, handle=%d\n", idx);
     file_handles[idx].in_use = 1;
     file_handles[idx].is_posix = 0;
     return fil_to_file(&file_handles[idx].fil);

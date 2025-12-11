@@ -555,7 +555,6 @@ static void MusicGenerator(audio_buffer_t *buffer) {
     while (filled < samples_to_fill) {
         // Safety check to prevent infinite loops
         if (++loop_iterations > MAX_LOOP_ITERATIONS) {
-            printf("MusicGen: loop limit hit, filled=%u/%u\n", filled, samples_to_fill);
             break;
         }
         
@@ -703,7 +702,6 @@ bool I_Music_Init(void) {
     // Initialize OPL emulator
     opl_emu = OPL_new(OPL_CLOCK, OPL_SAMPLE_RATE);
     if (!opl_emu) {
-        printf("I_Music_Init: Failed to create OPL emulator\n");
         return false;
     }
 
@@ -733,7 +731,6 @@ bool I_Music_Init(void) {
     // This avoids issues with the callback being called before music is loaded
 
     music_initialized = true;
-    printf("I_Music_Init: OPL music initialized\n");
     return true;
 }
 
@@ -767,25 +764,20 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     // Load MIDI file from GRP archive using Duke3D's file functions
     int32_t fd = kopen4load(filename, 0);  // 0 = try filesystem first, then GRP
     if (fd < 0) {
-        printf("I_Music_PlayMIDI: Failed to open %s from GRP\n", filename);
         psram_set_temp_mode(0);
         return false;
     }
 
     int32_t fileSize = kfilelength(fd);
     if (fileSize <= 0) {
-        printf("I_Music_PlayMIDI: Invalid file size for %s\n", filename);
         kclose(fd);
         psram_set_temp_mode(0);
         return false;
     }
 
-    printf("I_Music_PlayMIDI: Loading %s (%d bytes)\n", filename, fileSize);
-
     // Read MIDI data into buffer
     uint8_t *midiBuffer = psram_malloc(fileSize);
     if (!midiBuffer) {
-        printf("I_Music_PlayMIDI: Failed to allocate buffer for %s\n", filename);
         kclose(fd);
         psram_set_temp_mode(0);
         return false;
@@ -795,7 +787,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     kclose(fd);
 
     if (bytesRead != fileSize) {
-        printf("I_Music_PlayMIDI: Read error for %s (%d/%d)\n", filename, bytesRead, fileSize);
         psram_free(midiBuffer);
         psram_set_temp_mode(0);
         return false;
@@ -809,7 +800,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     
     FILE *tempFile = fopen(tempPath, "wb");
     if (!tempFile) {
-        printf("I_Music_PlayMIDI: Failed to create temp file\n");
         psram_free(midiBuffer);
         psram_set_temp_mode(0);
         return false;
@@ -822,7 +812,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     psram_free(midiBuffer);
 
     if (written != (size_t)fileSize) {
-        printf("I_Music_PlayMIDI: Failed to write temp file (%zu/%d)\n", written, fileSize);
         psram_set_temp_mode(0);
         return false;
     }
@@ -833,7 +822,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     psram_set_temp_mode(0);
 
     if (!current_midi) {
-        printf("I_Music_PlayMIDI: Failed to load %s\n", filename);
         return false;
     }
 
@@ -845,7 +833,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     // Allocate track iterators
     track_iters = psram_malloc(num_tracks * sizeof(midi_track_iter_t *));
     if (!track_iters) {
-        printf("I_Music_PlayMIDI: Failed to allocate track iterators\n");
         MIDI_FreeFile(current_midi);
         current_midi = NULL;
         return false;
@@ -854,7 +841,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
     // Allocate track timing array
     track_next_event_us = psram_malloc(num_tracks * sizeof(uint64_t));
     if (!track_next_event_us) {
-        printf("I_Music_PlayMIDI: Failed to allocate track timing\n");
         psram_free(track_iters);
         track_iters = NULL;
         MIDI_FreeFile(current_midi);
@@ -910,7 +896,6 @@ bool I_Music_PlayMIDI(const char *filename, bool loop) {
         I_PicoSound_SetMusicGenerator(MusicGenerator);
     }
 
-    printf("I_Music_PlayMIDI: Playing %s (%u tracks)\n", filename, num_tracks);
     return true;
 }
 
@@ -1012,5 +997,4 @@ void I_Music_RegisterTimbreBank(const uint8_t *timbres) {
     }
 
     timbre_loaded = true;
-    printf("I_Music_RegisterTimbreBank: Loaded 256 instruments\n");
 }

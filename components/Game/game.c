@@ -8957,11 +8957,6 @@ int32_t playback(void)
     while (ud.reccnt > 0 || foundemo == 0)
     {
         demo_loop_count++;
-        if ((demo_loop_count % 100) == 0 || demo_loop_count > 110) {
-            printf("DEMO: loop=%lu reccnt=%d tc=%ld lc=%ld\n", 
-                   (unsigned long)demo_loop_count, (int)ud.reccnt,
-                   (long)totalclock, (long)lockclock);
-        }
         if(foundemo) while ( totalclock >= (lockclock+TICSPERFRAME) )
         {
             if ((i == 0) || (i >= RECSYNCBUFSIZ))
@@ -8993,14 +8988,7 @@ int32_t playback(void)
 
             j = min(max((totalclock-lockclock)*(65536/TICSPERFRAME),0),65536);
             
-            // Debug: track where crash occurs
-            if (demo_loop_count >= 95) {
-                printf("FRAME %lu: displayrooms start\n", (unsigned long)demo_loop_count);
-            }
             displayrooms(screenpeek,j);
-            if (demo_loop_count >= 95) {
-                printf("FRAME %lu: displayrest start\n", (unsigned long)demo_loop_count);
-            }
             displayrest(j);
 
             if(ud.multimode > 1 && ps[myconnectindex].gm )

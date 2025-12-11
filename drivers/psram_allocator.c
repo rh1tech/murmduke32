@@ -83,10 +83,6 @@ void *psram_malloc(size_t size) {
         *header = size;
         
         void *ptr = (void *)(header + 1);
-        // Only log large allocations (>64KB) to reduce noise
-        if (size > 65536) {
-            printf("psram_malloc(%dKB) Total: %.2fMB\n", (int)(size/1024), (psram_offset + total_size) / (1024.0 * 1024.0));
-        }
         psram_offset += total_size;
         return ptr;
     }
@@ -153,29 +149,17 @@ void psram_reset(void) {
 
 void psram_mark_session(void) {
     psram_session_mark = psram_offset;
-    printf("PSRAM: Session marked at offset %d (%.2f MB used)\n", 
-           (int)psram_session_mark, psram_session_mark / (1024.0 * 1024.0));
 }
 
 void psram_restore_session(void) {
     if (psram_session_mark == 0) {
-        printf("PSRAM: Warning - no session mark set, cannot restore\n");
         return;
     }
-    size_t freed = psram_offset - psram_session_mark;
     psram_offset = psram_session_mark;
     psram_temp_offset = 0;
-    printf("PSRAM: Session restored to offset %d (freed %.2f MB)\n",
-           (int)psram_offset, freed / (1024.0 * 1024.0));
 }
 
 void psram_print_stats(void) {
-    size_t perm_used = psram_offset - SCRATCH_SIZE;
-    size_t perm_free = PERM_SIZE - psram_offset;
-    size_t temp_used = psram_temp_offset;
-    size_t temp_free = TEMP_SIZE - psram_temp_offset;
-    
-    printf("PSRAM: Perm=%.2fMB/%.2fMB Temp=%.2fMB/%.2fMB\n",
-           perm_used / (1024.0 * 1024.0), (PERM_SIZE - SCRATCH_SIZE) / (1024.0 * 1024.0),
-           temp_used / (1024.0 * 1024.0), TEMP_SIZE / (1024.0 * 1024.0));
+    // Debug function - no output in release builds
+    (void)0;
 }

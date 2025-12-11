@@ -24,31 +24,24 @@ int SDL_Init(Uint32 flags) {
         return 0;
     }
     
-    printf("SDL_Init: Initializing RP2350 platform...\n");
-    
     // Initialize PSRAM
     uint psram_pin = get_psram_pin();
-    printf("SDL_Init: PSRAM pin = %d\n", psram_pin);
     psram_init(psram_pin);
     
     // Mount SD Card
     FRESULT fr = f_mount(&fs, "", 1);
     if (fr != FR_OK) {
         snprintf(error_string, sizeof(error_string), "Failed to mount SD card: %d", fr);
-        printf("SDL_Init: %s\n", error_string);
         return -1;
     }
-    printf("SDL_Init: SD card mounted\n");
     
     // Initialize stdio wrapper for FatFS
     stdio_fatfs_init();
     
     // Initialize PS/2 Keyboard
     ps2kbd_init();
-    printf("SDL_Init: PS/2 keyboard initialized\n");
     
     sdl_initialized = 1;
-    printf("SDL_Init: Complete\n");
     
     return 0;
 }
@@ -142,18 +135,14 @@ SDL_GrabMode SDL_WM_GrabInput(SDL_GrabMode mode) {
 
 int PlayMusic(const char *filename) {
     if (!filename || !filename[0]) {
-        printf("PlayMusic: No filename provided\n");
         return 0;
     }
 
-    printf("PlayMusic: Playing %s\n", filename);
-    
     // Play the MIDI file with looping enabled
     if (I_Music_PlayMIDI(filename, true)) {
         return 1;  // Success
     }
     
-    printf("PlayMusic: Failed to play %s\n", filename);
     return 0;
 }
 

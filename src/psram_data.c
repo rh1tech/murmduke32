@@ -101,7 +101,6 @@ struct player_struct *ps = NULL;
     } \
     memset(ptr, 0, size); \
     total_allocated += size; \
-    printf("PSRAM: %s = %u bytes\n", name, (unsigned)size); \
 } while(0)
 
 /* Local constants needed for engine.c arrays */
@@ -110,8 +109,6 @@ struct player_struct *ps = NULL;
 
 void psram_data_init(void) {
     size_t total_allocated = 0;
-    
-    printf("\n=== PSRAM Data Allocation ===\n");
     
     /* Engine arrays from build.h */
     PSRAM_ALLOC(sector, sectortype, MAXSECTORS, "sector");
@@ -176,6 +173,5 @@ void psram_data_init(void) {
     PSRAM_ALLOC(myzbak, int32_t, MOVEFIFOSIZ, "myzbak");
     PSRAM_ALLOC(ps, struct player_struct, MAXPLAYERS, "ps");
     
-    printf("=== Total PSRAM allocated: %u bytes (%.2f MB) ===\n\n",
-           (unsigned)total_allocated, total_allocated / (1024.0 * 1024.0));
+    (void)total_allocated;  // Suppress unused warning
 }

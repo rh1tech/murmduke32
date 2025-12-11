@@ -54,16 +54,12 @@ int FX_SetupSoundBlaster(fx_blaster_config blaster, int *MaxVoices, int *MaxSamp
 }
 
 int FX_Init(int SoundCard, int numvoices, int numchannels, int samplebits, unsigned mixrate) {
-    printf("FX_Init: Initializing I2S audio (voices=%d, mixrate=%u)\n", numvoices, mixrate);
-    
     fx_mixrate = mixrate;
     
     if (I_PicoSound_Init(numvoices, mixrate)) {
         FX_Installed = 1;
-        printf("FX_Init: I2S audio initialized successfully\n");
         return FX_Ok;
     } else {
-        printf("FX_Init: Failed to initialize I2S audio\n");
         return FX_Error;
     }
 }
@@ -78,7 +74,6 @@ int FX_SetCallBack(void (*function)(int32_t)) {
 #if DISABLE_SOUND_CALLBACKS
     // Don't register callback - sounds will play but game won't be notified
     (void)function;
-    printf("[AUDIO] Callbacks DISABLED for testing\n");
     return FX_Ok;
 #else
     I_PicoSound_SetCallback(function);
@@ -201,18 +196,14 @@ int FX_PlayVOC(uint8_t *ptr, int pitchoffset, int vol, int left, int right,
 int FX_PlayLoopedVOC(uint8_t *ptr, int32_t loopstart, int32_t loopend,
                      int32_t pitchoffset, int32_t vol, int32_t left, int32_t right, 
                      int32_t priority, uint32_t callbackval) {
-    printf("FX_PlayLoopedVOC: ptr=%p cbval=%u\n", ptr, (unsigned)callbackval);
     if (!FX_Installed || !ptr) return 0;
     
 #if DISABLE_SOUND_EFFECTS
     return 0;  // Disabled for debugging
 #else
-    printf("FX_PlayLoopedVOC: getting length...\n");
     uint32_t length = get_voc_data_length(ptr);
-    printf("FX_PlayLoopedVOC: length=%u, calling I_PicoSound...\n", (unsigned)length);
     int result = I_PicoSound_PlayVOC(ptr, length, 0, pitchoffset, vol, left, right,
                                priority, callbackval, true, loopstart, loopend);
-    printf("FX_PlayLoopedVOC: result=%d\n", result);
     return result;
 #endif
 }
@@ -430,7 +421,6 @@ char *MUSIC_ErrorString(int ErrorNumber) {
 }
 
 int MUSIC_Init(int SoundCard, int Address) {
-    printf("MUSIC_Init: Initializing OPL music\n");
     if (I_Music_Init()) {
         return MUSIC_Ok;
     }
@@ -486,7 +476,6 @@ int MUSIC_StopSong(void) {
 int MUSIC_PlaySong(char *song, int loopflag) { 
     // Note: Duke3D calls PlayMusic() which loads from file,
     // this function is for playing from memory which we don't support
-    printf("MUSIC_PlaySong: Not supported (use PlayMusic for file-based playback)\n");
     return MUSIC_Ok; 
 }
 
