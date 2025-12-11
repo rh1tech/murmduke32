@@ -9569,13 +9569,6 @@ uint8_t  domovethings(void)
     short i, j;
     uint8_t  ch;
 
-    // Heartbeat for debugging hangs
-    static uint32_t move_count = 0;
-    move_count++;
-    if ((move_count % 500) == 0) {
-        printf("MOVE: %lu\n", (unsigned long)move_count);
-    }
-
     for(i=connecthead;i>=0;i=connectpoint2[i])
         if( sync[i].bits&(1<<17) )
     {

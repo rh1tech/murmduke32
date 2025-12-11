@@ -22,6 +22,7 @@
 #define  sc_LeftControl  0x1d
 #define  sc_LeftShift    0x2a
 #define  sc_RightShift   0x36
+#define  sc_CapsLock     0x3a
 #define  sc_F1           0x3b
 #define  sc_F2           0x3c
 #define  sc_F3           0x3d
@@ -38,6 +39,26 @@
 #define  sc_DownArrow    0x6a
 #define  sc_LeftArrow    0x6b
 #define  sc_RightArrow   0x6c
+#define  sc_Insert       0x5e
+#define  sc_Delete       0x5f
+#define  sc_Home         0x61
+#define  sc_End          0x62
+#define  sc_PgUp         0x63
+#define  sc_PgDn         0x64
+#define  sc_Pause        0x59
+#define  sc_ScrollLock   0x46
+#define  sc_NumLock      0x45
+#define  sc_Comma        0x33
+#define  sc_Period       0x34
+#define  sc_Slash        0x35
+#define  sc_SemiColon    0x27
+#define  sc_Quote        0x28
+#define  sc_Tilde        0x29
+#define  sc_Minus        0x0c
+#define  sc_Equals       0x0d
+#define  sc_OpenBracket  0x1a
+#define  sc_CloseBracket 0x1b
+#define  sc_BackSlash    0x2b
 #define  sc_A            0x1e
 #define  sc_B            0x30
 #define  sc_C            0x2e
@@ -74,6 +95,23 @@
 #define  sc_8            0x09
 #define  sc_9            0x0a
 #define  sc_0            0x0b
+// Keypad
+#define  sc_kpad_1       0x4f
+#define  sc_kpad_2       0x50
+#define  sc_kpad_3       0x51
+#define  sc_kpad_4       0x4b
+#define  sc_kpad_5       0x4c
+#define  sc_kpad_6       0x4d
+#define  sc_kpad_7       0x47
+#define  sc_kpad_8       0x48
+#define  sc_kpad_9       0x49
+#define  sc_kpad_0       0x52
+#define  sc_kpad_Minus   0x4a
+#define  sc_kpad_Plus    0x4e
+#define  sc_kpad_Period  0x53
+#define  sc_Kpad_Star    0x37
+#define  sc_kpad_Slash   0x67
+#define  sc_kpad_Enter   0x68
 
 struct KeyEvent {
     int pressed;
@@ -103,17 +141,23 @@ static unsigned char hid_to_duke3d(uint8_t code) {
     
     // Special keys
     switch (code) {
-        case 0x28: return sc_Return;
-        case 0x29: return sc_Escape;
-        case 0x2A: return sc_BackSpace;
-        case 0x2B: return sc_Tab;
-        case 0x2C: return sc_Space;
-        
-        // Arrow keys
-        case 0x4F: return sc_RightArrow;
-        case 0x50: return sc_LeftArrow;
-        case 0x51: return sc_DownArrow;
-        case 0x52: return sc_UpArrow;
+        case 0x28: return sc_Return;      // Enter
+        case 0x29: return sc_Escape;      // Escape
+        case 0x2A: return sc_BackSpace;   // Backspace
+        case 0x2B: return sc_Tab;         // Tab
+        case 0x2C: return sc_Space;       // Space
+        case 0x2D: return sc_Minus;       // - and _
+        case 0x2E: return sc_Equals;      // = and +
+        case 0x2F: return sc_OpenBracket; // [ and {
+        case 0x30: return sc_CloseBracket;// ] and }
+        case 0x31: return sc_BackSlash;   // \ and |
+        case 0x33: return sc_SemiColon;   // ; and :
+        case 0x34: return sc_Quote;       // ' and "
+        case 0x35: return sc_Tilde;       // ` and ~
+        case 0x36: return sc_Comma;       // , and <
+        case 0x37: return sc_Period;      // . and >
+        case 0x38: return sc_Slash;       // / and ?
+        case 0x39: return sc_CapsLock;    // Caps Lock
         
         // Function keys F1-F12 (HID 0x3A-0x45)
         case 0x3A: return sc_F1;
@@ -128,6 +172,41 @@ static unsigned char hid_to_duke3d(uint8_t code) {
         case 0x43: return sc_F10;
         case 0x44: return sc_F11;
         case 0x45: return sc_F12;
+        
+        // Navigation keys
+        case 0x47: return sc_ScrollLock;  // Scroll Lock
+        case 0x48: return sc_Pause;       // Pause
+        case 0x49: return sc_Insert;      // Insert
+        case 0x4A: return sc_Home;        // Home
+        case 0x4B: return sc_PgUp;        // Page Up
+        case 0x4C: return sc_Delete;      // Delete
+        case 0x4D: return sc_End;         // End
+        case 0x4E: return sc_PgDn;        // Page Down
+        
+        // Arrow keys
+        case 0x4F: return sc_RightArrow;
+        case 0x50: return sc_LeftArrow;
+        case 0x51: return sc_DownArrow;
+        case 0x52: return sc_UpArrow;
+        
+        // Keypad
+        case 0x53: return sc_NumLock;     // Num Lock
+        case 0x54: return sc_kpad_Slash;  // Keypad /
+        case 0x55: return sc_Kpad_Star;   // Keypad *
+        case 0x56: return sc_kpad_Minus;  // Keypad -
+        case 0x57: return sc_kpad_Plus;   // Keypad +
+        case 0x58: return sc_kpad_Enter;  // Keypad Enter
+        case 0x59: return sc_kpad_1;
+        case 0x5A: return sc_kpad_2;
+        case 0x5B: return sc_kpad_3;
+        case 0x5C: return sc_kpad_4;
+        case 0x5D: return sc_kpad_5;
+        case 0x5E: return sc_kpad_6;
+        case 0x5F: return sc_kpad_7;
+        case 0x60: return sc_kpad_8;
+        case 0x61: return sc_kpad_9;
+        case 0x62: return sc_kpad_0;
+        case 0x63: return sc_kpad_Period; // Keypad .
         
         default: return sc_None;
     }

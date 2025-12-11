@@ -178,14 +178,10 @@ static bool loadPage(uint16_t pageNumber)
     if (!animStream || animStream->handle < 0) return false;
     if (animStream->curLpNum == pageNumber) return true;  // Already loaded
     
-    printf("loadPage(%d)\n", pageNumber);
-    
     // Large pages are at fixed 64KB (0x10000) offsets after the header area
     // Header area = 0xb00 (2816 bytes) = header (128) + palette (1024) + LP table (1536) + padding
     // Each LP starts at: 0xb00 + (pageNumber * 0x10000)
     uint32_t offset = 0xb00 + (pageNumber * 0x10000);
-    
-    printf("loadPage: seek to %u (0x%x)\n", offset, offset);
     
     // Seek to this large page
     klseek(animStream->handle, offset, SEEK_SET);
@@ -193,20 +189,15 @@ static bool loadPage(uint16_t pageNumber)
     // Read LP descriptor (6 bytes)
     kread(animStream->handle, &animStream->curLp, sizeof(lp_descriptor_t));
     
-    printf("loadPage: baseRecord=%d, nRecords=%d, nBytes=%d\n", 
-           animStream->curLp.baseRecord, animStream->curLp.nRecords, animStream->curLp.nBytes);
-    
     // Skip the 2-byte padding after descriptor
     klseek(animStream->handle, offset + sizeof(lp_descriptor_t) + sizeof(uint16_t), SEEK_SET);
     
     // Read LP data (record offsets + compressed data)
     int32_t toRead = animStream->curLp.nBytes + (animStream->curLp.nRecords * 2);
-    printf("loadPage: toRead=%d\n", toRead);
     if (toRead > 0x10000) toRead = 0x10000;  // Safety limit
     kread(animStream->handle, animStream->pageBuffer, toRead);
     
     animStream->curLpNum = pageNumber;
-    printf("loadPage done\n");
     return true;
 }
 
@@ -295,12 +286,6 @@ bool AnimStream_Open(const char *filename)
     uint8_t palTemp[1024];
     kread(animStream->handle, palTemp, 1024);
     
-    // Debug: print first few palette entries
-    printf("AnimStream: Raw palette[0-3]: %02x %02x %02x %02x\n", 
-           palTemp[0], palTemp[1], palTemp[2], palTemp[3]);
-    printf("AnimStream: Raw palette[4-7]: %02x %02x %02x %02x\n", 
-           palTemp[4], palTemp[5], palTemp[6], palTemp[7]);
-    
     // The original animlib.c does:
     // pal[i+2] = file[0] (first byte)
     // pal[i+1] = file[1] (second byte)  
@@ -314,27 +299,11 @@ bool AnimStream_Open(const char *filename)
         // Skip byte 4 (alpha)
     }
     
-    printf("AnimStream: Converted pal[0-2]: %02x %02x %02x\n",
-           animStream->palette[0], animStream->palette[1], animStream->palette[2]);
-    
     // Seek to LP table (at lpfTableOffset, typically 1280)
-    printf("AnimStream: lpfTableOffset=%d, nLps=%d\n", 
-           animStream->header.lpfTableOffset, animStream->header.nLps);
     klseek(animStream->handle, animStream->header.lpfTableOffset, SEEK_SET);
     
     // Read LP descriptors
     kread(animStream->handle, animStream->lpArray, sizeof(lp_descriptor_t) * animStream->header.nLps);
-    
-    // Debug: print first few LP descriptors
-    for (int i = 0; i < 3 && i < animStream->header.nLps; i++) {
-        printf("  LP[%d]: baseRecord=%d, nRecords=%d, nBytes=%d\n",
-               i, animStream->lpArray[i].baseRecord, 
-               animStream->lpArray[i].nRecords, animStream->lpArray[i].nBytes);
-    }
-    
-    printf("AnimStream: Opened %s (%u frames, %dx%d)\n", 
-           filename, animStream->header.nRecords,
-           animStream->header.width, animStream->header.height);
     
     return true;
 }
@@ -367,8 +336,6 @@ uint8_t *AnimStream_DrawFrame(int framenumber)
 {
     if (!animStream) return NULL;
     
-    printf("AnimStream_DrawFrame(%d), cur=%d\n", framenumber, animStream->currentFrame);
-    
     // Frames are 0-indexed internally but 1-indexed in the API
     // Actually ANM files use 0-indexed frames
     
@@ -379,14 +346,12 @@ uint8_t *AnimStream_DrawFrame(int framenumber)
         }
     } else {
         // Need to start from beginning
-        printf("AnimStream: Building from frame 0 to %d\n", framenumber);
         for (int i = 0; i < framenumber; i++) {
             drawFrame(i);
         }
     }
     
     animStream->currentFrame = framenumber;
-    printf("AnimStream_DrawFrame done\n");
     return animStream->imageBuffer;
 }
 

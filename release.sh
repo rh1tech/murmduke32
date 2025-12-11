@@ -5,7 +5,7 @@
 # Creates UF2 files for each board variant (M1, M2) at each clock speed:
 #   - Non-overclocked: 252 MHz CPU, 100 MHz PSRAM (84 MHz actual)
 #   - Medium overclock: 378 MHz CPU, 133 MHz PSRAM (126 MHz actual)  
-#   - Max overclock: 504 MHz CPU, 133 MHz PSRAM (126 MHz actual)
+#   - Max overclock: 504 MHz CPU, 166 MHz PSRAM (168 MHz actual)
 #
 # Output format: murmduke32_mX_Y_Z_A_BB.uf2
 #   X  = Board variant (1 or 2)
@@ -97,14 +97,14 @@ mkdir -p "$RELEASE_DIR"
 # Tested working configurations:
 #   252 MHz CPU + 100 MHz PSRAM = 84 MHz actual (no overclock)
 #   378 MHz CPU + 133 MHz PSRAM = 126 MHz actual (medium)
-#   504 MHz CPU + 133 MHz PSRAM = 126 MHz actual (max stable)
+#   504 MHz CPU + 166 MHz PSRAM = 168 MHz actual (max stable)
 CONFIGS=(
     "M1 252 100 non-overclocked"
     "M1 378 133 medium-overclock"
-    "M1 504 133 max-overclock"
+    "M1 504 166 max-overclock"
     "M2 252 100 non-overclocked"
     "M2 378 133 medium-overclock"
-    "M2 504 133 max-overclock"
+    "M2 504 166 max-overclock"
 )
 
 BUILD_COUNT=0

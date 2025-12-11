@@ -10,9 +10,20 @@ set(BOARD_VARIANT "M1" CACHE STRING "Board variant: M1 or M2")
 # 252 = no overclock (default), 378 = medium, 504 = high (Quake port default)
 set(CPU_SPEED "252" CACHE STRING "CPU clock in MHz: 252, 378, 504")
 
-# PSRAM speed configuration (84, 100, 133 MHz target)
+# PSRAM speed configuration (84, 100, 133, 166 MHz target)
 # Actual speed depends on CPU clock divider
-set(PSRAM_SPEED "133" CACHE STRING "PSRAM max frequency in MHz: 84, 100, 133")
+set(PSRAM_SPEED "133" CACHE STRING "PSRAM max frequency in MHz: 84, 100, 133, 166")
+
+# CPU voltage selection based on speed
+# Higher speeds need higher voltage for stability
+if(CPU_SPEED GREATER_EQUAL 504)
+    set(CPU_VOLTAGE "VREG_VOLTAGE_1_65")
+elseif(CPU_SPEED GREATER_EQUAL 378)
+    set(CPU_VOLTAGE "VREG_VOLTAGE_1_60")
+else()
+    set(CPU_VOLTAGE "VREG_VOLTAGE_1_50")
+endif()
+message(STATUS "CPU voltage: ${CPU_VOLTAGE}")
 
 # Board-specific GPIO pins
 if(BOARD_VARIANT STREQUAL "M1")
@@ -170,7 +181,7 @@ target_compile_definitions(murmduke3d PRIVATE
     BOARD_${BOARD_VARIANT}
     # CPU/PSRAM speed configuration
     CPU_CLOCK_MHZ=${CPU_SPEED}
-    CPU_VOLTAGE=VREG_VOLTAGE_1_60
+    CPU_VOLTAGE=${CPU_VOLTAGE}
     PSRAM_MAX_FREQ_MHZ=${PSRAM_SPEED}
     PLATFORM_SUPPORTS_SDL
     DUKE3D_RP2350

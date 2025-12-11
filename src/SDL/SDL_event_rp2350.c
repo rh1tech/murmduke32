@@ -12,7 +12,7 @@ static SDL_Event event_queue[MAX_EVENTS];
 static int event_head = 0;
 static int event_tail = 0;
 
-// Duke3D scancodes (from keyboard.h / ps2kbd_wrapper.cpp)
+// Duke3D scancodes (from keyboard.h)
 #define  sc_Escape       0x01
 #define  sc_1            0x02
 #define  sc_2            0x03
@@ -83,21 +83,38 @@ static int event_tail = 0;
 #define  sc_F10          0x44
 #define  sc_NumLock      0x45
 #define  sc_ScrollLock   0x46
-#define  sc_Home         0x47
-#define  sc_UpArrow      0x5a
-#define  sc_PgUp         0x49
-#define  sc_KeyPadMinus  0x4a
-#define  sc_LeftArrow    0x6b
-#define  sc_KeyPad5      0x4c
-#define  sc_RightArrow   0x6c
-#define  sc_KeyPadPlus   0x4e
-#define  sc_End          0x4f
-#define  sc_DownArrow    0x6a
-#define  sc_PgDn         0x51
-#define  sc_Insert       0x52
-#define  sc_Delete       0x53
+// Keypad (non-extended)
+#define  sc_kpad_7       0x47
+#define  sc_kpad_8       0x48
+#define  sc_kpad_9       0x49
+#define  sc_kpad_Minus   0x4a
+#define  sc_kpad_4       0x4b
+#define  sc_kpad_5       0x4c
+#define  sc_kpad_6       0x4d
+#define  sc_kpad_Plus    0x4e
+#define  sc_kpad_1       0x4f
+#define  sc_kpad_2       0x50
+#define  sc_kpad_3       0x51
+#define  sc_kpad_0       0x52
+#define  sc_kpad_Period  0x53
 #define  sc_F11          0x57
 #define  sc_F12          0x58
+#define  sc_Pause        0x59
+// Extended scancodes (from keyboard.h)
+#define  sc_UpArrow      0x5a
+#define  sc_Insert       0x5e
+#define  sc_Delete       0x5f
+#define  sc_Home         0x61
+#define  sc_End          0x62
+#define  sc_PgUp         0x63
+#define  sc_PgDn         0x64
+#define  sc_RightAlt     0x65
+#define  sc_RightControl 0x66
+#define  sc_kpad_Slash   0x67
+#define  sc_kpad_Enter   0x68
+#define  sc_DownArrow    0x6a
+#define  sc_LeftArrow    0x6b
+#define  sc_RightArrow   0x6c
 
 // Convert Duke3D scancode to SDL keycode
 static SDLKey duke3d_scancode_to_sdl_key(unsigned char key) {
@@ -170,8 +187,28 @@ static SDLKey duke3d_scancode_to_sdl_key(unsigned char key) {
         case sc_F8:          return SDLK_F8;
         case sc_F9:          return SDLK_F9;
         case sc_F10:         return SDLK_F10;
+        case sc_NumLock:     return SDLK_NUMLOCK;
+        case sc_ScrollLock:  return SDLK_SCROLLOCK;
         case sc_F11:         return SDLK_F11;
         case sc_F12:         return SDLK_F12;
+        case sc_Pause:       return SDLK_PAUSE;
+        // Keypad
+        case sc_kpad_7:      return SDLK_KP7;
+        case sc_kpad_8:      return SDLK_KP8;
+        case sc_kpad_9:      return SDLK_KP9;
+        case sc_kpad_Minus:  return SDLK_KP_MINUS;
+        case sc_kpad_4:      return SDLK_KP4;
+        case sc_kpad_5:      return SDLK_KP5;
+        case sc_kpad_6:      return SDLK_KP6;
+        case sc_kpad_Plus:   return SDLK_KP_PLUS;
+        case sc_kpad_1:      return SDLK_KP1;
+        case sc_kpad_2:      return SDLK_KP2;
+        case sc_kpad_3:      return SDLK_KP3;
+        case sc_kpad_0:      return SDLK_KP0;
+        case sc_kpad_Period: return SDLK_KP_PERIOD;
+        case sc_kpad_Slash:  return SDLK_KP_DIVIDE;
+        case sc_kpad_Enter:  return SDLK_KP_ENTER;
+        // Extended keys
         case sc_UpArrow:     return SDLK_UP;
         case sc_DownArrow:   return SDLK_DOWN;
         case sc_LeftArrow:   return SDLK_LEFT;
@@ -182,6 +219,8 @@ static SDLKey duke3d_scancode_to_sdl_key(unsigned char key) {
         case sc_PgDn:        return SDLK_PAGEDOWN;
         case sc_Insert:      return SDLK_INSERT;
         case sc_Delete:      return SDLK_DELETE;
+        case sc_RightAlt:    return SDLK_RALT;
+        case sc_RightControl:return SDLK_RCTRL;
         default:             return SDLK_UNKNOWN;
     }
 }

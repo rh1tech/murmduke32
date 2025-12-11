@@ -4713,12 +4713,9 @@ void playanm(char  *fn,uint8_t  t)
     VBE_setPalette(tempbuf);
 
     ototalclock = totalclock + 10;
-    
-    printf("playanm: Starting loop for %d frames\n", numframes);
 
     for(i=1;i<numframes;i++)
     {
-       printf("playanm: frame %d, tc=%d, otc=%d\n", i, (int)totalclock, (int)ototalclock);
        while(totalclock < ototalclock)
        {
           if( KB_KeyWaiting() )
