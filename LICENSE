@@ -1,3 +1,32 @@
+MurmDuke3D - Duke Nukem 3D for RP2350
+================================================================================
+
+Copyright (C) 2024-2025 Mikhail Matveev <xtreme@outlook.com>
+RP2350 port, PSRAM integration, hardware abstraction layer
+
+Based on:
+- Duke3D ESP32 port by Jarrad Kirsopp (https://github.com/jkirsons/Duke3D)
+- Chocolate Duke3D by Fabien Sanglard (https://github.com/fabiensanglard/chocolate_duke3D)
+- QuakeGeneric RP2350 port by DnCraptor (https://github.com/DnCraptor/quakegeneric)
+
+Original Duke Nukem 3D source code:
+Copyright (C) 1996, 2003 3D Realms Entertainment
+
+Build Engine:
+Copyright (C) 1993-1997 Ken Silverman
+See BUILDLIC.txt for Build Engine license terms.
+
+Audio Library:
+Copyright (C) 1994-1995 Apogee Software, Ltd.
+Copyright (C) 1994 James R. Dose
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+================================================================================
+
                     GNU GENERAL PUBLIC LICENSE
                        Version 2, June 1991
 
